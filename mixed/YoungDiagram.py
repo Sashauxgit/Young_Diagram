@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, 
+    QApplication, QMainWindow, QTableWidget, QWidget,
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog
 )
 from PyQt5.QtCore import Qt, QSize
@@ -8,11 +8,18 @@ from PyQt5 import QtGui
 
 
 class MainWindow(QMainWindow):
+    def initSecondWindow(self):
+        self.secondWindow = QWidget(self)
+        self.secondWindow.setStyleSheet("background-color: lightred")
+        self.secondWindow.setGeometry(100, 100, 100, 100)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle('YoungDraw')
         #self.setWindowIcon(QIcon('./assets/usergroup.png'))
         self.setGeometry(100, 100, 1100, 800)
+
+        self.initSecondWindow()
 
         self.panel = QMenuBar(self)
         self.setMenuBar(self.panel)
