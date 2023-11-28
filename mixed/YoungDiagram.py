@@ -4,12 +4,21 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5 import QtGui
+from PyQt5.QtGui import QPalette, QColor
 
 class SecondWidget(QWidget):
+
+    def workWithBackgroundColor(self):
+        #self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
+        palette = QPalette()
+        palette.setColor(QPalette.Background, QColor(255,0,0,125))
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+
+
     def __init__(self, parent):
         super().__init__(parent)
-        self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
+        self.workWithBackgroundColor()
         self.setGeometry(0, 0, 300, 300)
 
     def mouseReleaseEvent(self, event):
@@ -46,8 +55,8 @@ class MainWindow(QMainWindow):
         paleteMenu = self.panel.addMenu("Palete")
         chooseColor = paleteMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
-        self.curColor = QtGui.QColor(255,100,0)
-        self.noColor = QtGui.QColor(255,255,255)
+        self.curColor = QColor(255,100,0)
+        self.noColor = QColor(255,255,255)
         
         # Работа с таблицей
         self.table = QTableWidget(self)
@@ -99,7 +108,7 @@ class MainWindow(QMainWindow):
                         coords.pop()
                     for coord in coords:
                             row, col, r, g, b = tuple(map(int, coord.split(";")))
-                            self.table.item(row, col).setBackground(QtGui.QColor(r,g,b))
+                            self.table.item(row, col).setBackground(QColor(r,g,b))
             except:
                 raise ValueError("Incorrect file values")        
     
