@@ -19,11 +19,16 @@ class SecondWidget(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.workWithBackgroundColor()
-        self.setGeometry(0, 0, 300, 300)
-
+        self.setGeometry(0, 0, 1500, 800)
+        
     def mouseReleaseEvent(self, event):
-        print(event.pos())
-        self.parent().itemAt(event.pos().x(), event.pos().y()).setBackground(self.parent().parent().curColor)
+        #print(event.pos())
+        cell = self.parent().itemAt(event.pos().x(), event.pos().y())
+        
+        if cell.background().color() == self.parent().parent().noColor:
+            cell.setBackground(self.parent().parent().curColor)
+        else:
+            cell.setBackground(self.parent().parent().noColor)
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
