@@ -9,8 +9,8 @@ from PyQt5 import QtGui
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
-        self.secondWindow = QWidget(self)
-        self.secondWindow.setStyleSheet("background-color: lightred")
+        self.secondWindow = QWidget(self.table)
+        self.secondWindow.setStyleSheet("background-color: lr")
         self.secondWindow.setGeometry(100, 100, 100, 100)
 
     def __init__(self):
@@ -19,7 +19,6 @@ class MainWindow(QMainWindow):
         #self.setWindowIcon(QIcon('./assets/usergroup.png'))
         self.setGeometry(100, 100, 1100, 800)
 
-        self.initSecondWindow()
 
         self.panel = QMenuBar(self)
         self.setMenuBar(self.panel)
@@ -71,6 +70,8 @@ class MainWindow(QMainWindow):
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.table.setItem(i, j, item)
+        
+        self.initSecondWindow()
     
     def cell_clicked(self):
         row = self.table.currentRow()
