@@ -6,12 +6,17 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QSize
 from PyQt5 import QtGui
 
+class SecondWidget(QWidget):
+    def focus_next_window(event):
+        event.widget.tk_focusNext().focus()
+        return("break")
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
-        self.secondWindow = QWidget(self.table)
+        self.secondWindow = SecondWidget(self.table)
         self.secondWindow.setStyleSheet("background-color: rgba(255, 0, 0, 0.5);")
         self.secondWindow.setGeometry(550, 150, 300, 300)
+        #self.secondWindow.setFocusPolicy(Qt.NoClick)
 
     def __init__(self):
         super().__init__()
