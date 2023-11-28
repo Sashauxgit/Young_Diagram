@@ -11,7 +11,7 @@ class MainWindow(QMainWindow):
     def initSecondWindow(self):
         self.secondWindow = QWidget(self.table)
         self.secondWindow.setStyleSheet("background-color: lr")
-        self.secondWindow.setGeometry(100, 100, 100, 100)
+        self.secondWindow.setGeometry(550, 150, 300, 300)
 
     def __init__(self):
         super().__init__()
