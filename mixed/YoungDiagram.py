@@ -7,16 +7,18 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5 import QtGui
 
 class SecondWidget(QWidget):
-    def focus_next_window(event):
-        event.widget.tk_focusNext().focus()
-        return("break")
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
+        self.setGeometry(0, 0, 300, 300)
+
+    def mouseReleaseEvent(self, event):
+        print(event.pos())
+        self.parent().itemAt(event.pos().x(), event.pos().y()).setBackground(self.parent().parent().curColor)
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
         self.secondWindow = SecondWidget(self.table)
-        self.secondWindow.setStyleSheet("background-color: rgba(255, 0, 0, 0.5);")
-        self.secondWindow.setGeometry(550, 150, 300, 300)
-        #self.secondWindow.setFocusPolicy(Qt.NoClick)
 
     def __init__(self):
         super().__init__()
