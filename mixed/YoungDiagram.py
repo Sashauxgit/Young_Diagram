@@ -86,7 +86,7 @@ class CellTable(QTableWidget):
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
-        self.secondWindow = SecondWidget(self.cellField)
+        self.secondWindow = SecondWidget(self.pageTape[self.curPageInd])
 
     def __init__(self):
         super().__init__()
@@ -111,29 +111,36 @@ class MainWindow(QMainWindow):
         chooseColor.triggered.connect(self.openColorDialog)
         #self.curColor = QColor(255,100,0)
         #self.noColor = QColor(255,255,255)
+
+        # Работа со страницами:
+        pagesSwitching = self.panel.addMenu("Pages")
+        toNextPageAct = pagesSwitching.addAction("go to next page")
+        toBackPageAct = pagesSwitching.addAction("go to back page")
+        toNextPageAct.triggered.connect(self.toNextPage)
+        toBackPageAct.triggered.connect(self.toBackPage)
         
-        # Работа с таблицей
-        self.cellField = CellTable(self, QColor(255,100,0))
-        self.setCentralWidget(self.cellField)
+        self.curPageInd = 0
+        self.pageTape = [CellTable(self, QColor(255,100,0))]
+        self.setCentralWidget(self.pageTape[0])
         self.initSecondWindow()
 
         openAction.triggered.connect(self.openFile)
         saveAction.triggered.connect(self.saveFile)
         screenAction.triggered.connect(self.takeScreenshot)
-        clearAction.triggered.connect(self.cellField.clearTable)
+        clearAction.triggered.connect(self.pageTape[self.curPageInd].clearTable)
     
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
         if filename:
             try:
-                self.cellField.clearTable()
+                self.pageTape[self.curPageInd].clearTable()
                 with open(filename, 'r') as file:
                     coords = file.read().split("\n")
                     if coords[-1] == '':
                         coords.pop()
                     for coord in coords:
                             row, col, r, g, b = tuple(map(int, coord.split(";")))
-                            self.cellField.item(row, col).setBackground(QColor(r,g,b))
+                            self.pageTape[self.curPageInd].item(row, col).setBackground(QColor(r,g,b))
             except:
                 raise ValueError("Incorrect file values")        
     
@@ -141,20 +148,26 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
         if filename:
             with open(filename, 'w') as file:
-                for row in range(self.cellField.row_k):
-                    for col in range(self.cellField.column_k):
-                        cellInStr = self.cellField.cellWrite(row, col)
+                for row in range(self.pageTape[self.curPageInd].row_k):
+                    for col in range(self.pageTape[self.curPageInd].column_k):
+                        cellInStr = self.pageTape[self.curPageInd].cellWrite(row, col)
                         if cellInStr != None:
                             file.write(cellInStr)
     
     def takeScreenshot(self):
-        screenshot = self.cellField.grab()
+        screenshot = self.pageTape[self.curPageInd].grab()
         filename, _ = QFileDialog.getSaveFileName(self, "Save screenshot", ".", "Image Files (*.png)")
         if filename:
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.cellField.curColor = QColorDialog.getColor()
+        self.pageTape[self.curPageInd].curColor = QColorDialog.getColor()
+    
+    def toNextPage(self):
+        pass
+
+    def toBackPage(self):
+        pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
