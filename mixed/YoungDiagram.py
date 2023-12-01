@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QWidget,
+    QApplication, QMainWindow, QTableWidget, QWidget, QTabWidget,
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle
 )
 from PyQt5.QtCore import Qt, QSize
@@ -37,7 +37,7 @@ class CellTable(QTableWidget):
         #self.table.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, self.table.size(), self.geometry()))
 
         self.column_k = 23
-        self.row_k = 300
+        self.row_k = 14
 
         self.curColor = curColor
         self.noColor = QColor(255,255,255)
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         openAction = menu.addAction("Open diagram")
         saveAction = menu.addAction("Save diagram")
         screenAction = menu.addAction("Take screenshot")
-        clearAction = menu.addAction("Clear field")
+        self.clearAction = menu.addAction("Clear field")
         
         # Работа с палитрой
         paleteMenu = self.panel.addMenu("Palete")
@@ -114,33 +114,33 @@ class MainWindow(QMainWindow):
 
         # Работа со страницами:
         pagesSwitching = self.panel.addMenu("Pages")
-        toNextPageAct = pagesSwitching.addAction("go to next page")
-        toBackPageAct = pagesSwitching.addAction("go to back page")
-        toNextPageAct.triggered.connect(self.toNextPage)
-        toBackPageAct.triggered.connect(self.toBackPage)
+        addPageAct = pagesSwitching.addAction("add page")
+        addPageAct.triggered.connect(self.addPage)
         
         self.curPageInd = 0
-        self.pageTape = [CellTable(self, QColor(255,100,0))]
-        self.setCentralWidget(self.pageTape[0])
-        self.initSecondWindow()
+        self.pageTape = QTabWidget(self)
+        self.pageTape.currentChanged.connect(self.changePage)
+        self.pageTape.addTab(CellTable(self.pageTape, QColor(255,100,0)), 'Страница {}'.format(self.curPageInd + 1))
+        self.setCentralWidget(self.pageTape)
+        #self.initSecondWindow()
 
         openAction.triggered.connect(self.openFile)
         saveAction.triggered.connect(self.saveFile)
         screenAction.triggered.connect(self.takeScreenshot)
-        clearAction.triggered.connect(self.pageTape[self.curPageInd].clearTable)
+        self.clearAction.triggered.connect(self.curPage().clearTable)
     
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
         if filename:
             try:
-                self.pageTape[self.curPageInd].clearTable()
+                self.curPage().clearTable()
                 with open(filename, 'r') as file:
                     coords = file.read().split("\n")
                     if coords[-1] == '':
                         coords.pop()
                     for coord in coords:
                             row, col, r, g, b = tuple(map(int, coord.split(";")))
-                            self.pageTape[self.curPageInd].item(row, col).setBackground(QColor(r,g,b))
+                            self.curPage().item(row, col).setBackground(QColor(r,g,b))
             except:
                 raise ValueError("Incorrect file values")        
     
@@ -148,42 +148,32 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
         if filename:
             with open(filename, 'w') as file:
-                for row in range(self.pageTape[self.curPageInd].row_k):
-                    for col in range(self.pageTape[self.curPageInd].column_k):
-                        cellInStr = self.pageTape[self.curPageInd].cellWrite(row, col)
+                for row in range(self.curPage().row_k):
+                    for col in range(self.curPage().column_k):
+                        cellInStr = self.curPage().cellWrite(row, col)
                         if cellInStr != None:
                             file.write(cellInStr)
     
     def takeScreenshot(self):
-        screenshot = self.pageTape[self.curPageInd].grab()
+        screenshot = self.curPage().grab()
         filename, _ = QFileDialog.getSaveFileName(self, "Save screenshot", ".", "Image Files (*.png)")
         if filename:
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.pageTape[self.curPageInd].curColor = QColorDialog.getColor()
+        self.curPage().curColor = QColorDialog.getColor()
     
-    def toNextPage(self):
-        self.pageTape[self.curPageInd].setHidden(True)
-        self.curPageInd += 1
-        
-        if self.curPageInd == len(self.pageTape):
-            self.pageTape.append(CellTable(self, QColor(255,100,0)))
-        
-        self.setCentralWidget(self.pageTape[self.curPageInd])
-        self.pageTape[self.curPageInd].setHidden(False)
-        self.update()
+    def addPage(self):
+        self.pageTape.addTab(CellTable(self.pageTape, QColor(255,100,0)), 'Страница {}'.format(self.pageTape.count() + 1))
+        self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
 
-    def toBackPage(self):
-        self.pageTape[self.curPageInd].setHidden(True)
-        self.curPageInd -= 1
-        
-        if self.curPageInd == 0:
-            return
-        
-        self.setCentralWidget(self.pageTape[self.curPageInd])
-        self.pageTape[self.curPageInd].setHidden(False)
-        self.update()
+    def changePage(self):
+        self.clearAction.triggered.disconnect(self.curPage().clearTable)
+        self.curPageInd = self.pageTape.currentIndex()
+        self.clearAction.triggered.connect(self.curPage().clearTable)
+    
+    def curPage(self):
+        return self.pageTape.widget(self.curPageInd)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
