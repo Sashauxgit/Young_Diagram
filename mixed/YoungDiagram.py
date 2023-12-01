@@ -26,21 +26,18 @@ class SecondWidget(QWidget):
         cell = self.parent().itemAt(event.pos().x(), event.pos().y())
         
         if cell.background().color() == self.parent().noColor:
-            cell.setBackground(self.parent().curColor)
+            cell.setBackground(self.parent().parent().curColor)
         else:
-            cell.setBackground(self.parent().noColor)
+            cell.setBackground(self.parent().parent().noColor)
 
 
 class CellTable(QTableWidget):
-    def __init__(self, parent, curColor):
+    def __init__(self, parent):
         super().__init__(parent)
         #self.table.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, self.table.size(), self.geometry()))
 
         self.column_k = 23
         self.row_k = 14
-
-        self.curColor = curColor
-        self.noColor = QColor(255,255,255)
 
         self.setColumnCount(self.column_k)
         self.setRowCount(self.row_k)
@@ -59,7 +56,7 @@ class CellTable(QTableWidget):
         for i in range(self.row_k):
             for j in range(self.column_k):
                 item = QTableWidgetItem(None)
-                item.setBackground(self.noColor)
+                item.setBackground(self.parent().parent().noColor)
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.setItem(i, j, item)
@@ -67,21 +64,21 @@ class CellTable(QTableWidget):
     def cell_clicked(self):
         row = self.currentRow()
         col = self.currentColumn()
-        if self.item(row, col).background().color() == self.noColor:
-            self.item(row, col).setBackground(self.curColor)
+        if self.item(row, col).background().color() == self.parent().parent().parent().noColor:
+            self.item(row, col).setBackground(self.parent().parent().parent().curColor)
         else:
-            self.item(row, col).setBackground(self.noColor)
+            self.item(row, col).setBackground(self.parent().parent().parent().noColor)
     
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
         r, g, b, _ = color.getRgb()
-        if color != self.noColor:
+        if color != self.parent().parent().parent().noColor:
             return "{};{};{};{};{}\n".format(row, column, r, g, b)
     
     def clearTable(self):
         for row in range(self.row_k):
             for col in range(self.column_k):
-                self.item(row, col).setBackground(self.noColor)
+                self.item(row, col).setBackground(self.parent().parent().parent().noColor)
 
 
 class MainWindow(QMainWindow):
@@ -109,8 +106,8 @@ class MainWindow(QMainWindow):
         paleteMenu = self.panel.addMenu("Palete")
         chooseColor = paleteMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
-        #self.curColor = QColor(255,100,0)
-        #self.noColor = QColor(255,255,255)
+        self.curColor = QColor(255,100,0)
+        self.noColor = QColor(255,255,255)
 
         # Работа со страницами:
         pagesSwitching = self.panel.addMenu("Pages")
@@ -120,7 +117,7 @@ class MainWindow(QMainWindow):
         self.curPageInd = 0
         self.pageTape = QTabWidget(self)
         self.pageTape.currentChanged.connect(self.changePage)
-        self.pageTape.addTab(CellTable(self.pageTape, QColor(255,100,0)), 'Страница {}'.format(self.curPageInd + 1))
+        self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.curPageInd + 1))
         self.setCentralWidget(self.pageTape)
         #self.initSecondWindow()
 
@@ -161,10 +158,10 @@ class MainWindow(QMainWindow):
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.curPage().curColor = QColorDialog.getColor()
+        self.curColor = QColorDialog.getColor()
     
     def addPage(self):
-        self.pageTape.addTab(CellTable(self.pageTape, QColor(255,100,0)), 'Страница {}'.format(self.pageTape.count() + 1))
+        self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
 
     def changePage(self):
