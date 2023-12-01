@@ -164,10 +164,26 @@ class MainWindow(QMainWindow):
         self.pageTape[self.curPageInd].curColor = QColorDialog.getColor()
     
     def toNextPage(self):
-        pass
+        self.pageTape[self.curPageInd].setHidden(True)
+        self.curPageInd += 1
+        
+        if self.curPageInd == len(self.pageTape):
+            self.pageTape.append(CellTable(self, QColor(255,100,0)))
+        
+        self.setCentralWidget(self.pageTape[self.curPageInd])
+        self.pageTape[self.curPageInd].setHidden(False)
+        self.update()
 
     def toBackPage(self):
-        pass
+        self.pageTape[self.curPageInd].setHidden(True)
+        self.curPageInd -= 1
+        
+        if self.curPageInd == 0:
+            return
+        
+        self.setCentralWidget(self.pageTape[self.curPageInd])
+        self.pageTape[self.curPageInd].setHidden(False)
+        self.update()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
