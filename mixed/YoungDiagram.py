@@ -1,10 +1,10 @@
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QWidget, QTabWidget,
+    QApplication, QMainWindow, QTableWidget, QWidget, QTabWidget, QToolButton,
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QFont
 
 class SecondWidget(QWidget):
 
@@ -106,13 +106,25 @@ class MainWindow(QMainWindow):
         self.curColor = QColor(255,100,0)
         self.noColor = QColor(255,255,255)
 
-        # Работа со страницами:
-        pagesSwitching = self.panel.addMenu("Pages")
-        addPageAct = pagesSwitching.addAction("add page")
-        addPageAct.triggered.connect(self.addPage)
         
+        #pagesSwitching = self.panel.addMenu("Pages")
+        #addPageAct = pagesSwitching.addAction("add page")
+        #addPageAct.triggered.connect(self.addPage)
+
+        # Работа со страницами:
         self.curPageInd = 0
         self.pageTape = QTabWidget(self)
+        #self.pageTape.setTabsClosable(True)
+
+        self.tabButton = QToolButton(self)
+        self.tabButton.setText('+')
+        font = QFont("Times new roman", 30)
+        font.setBold(True)
+        self.tabButton.setFont(font)
+        self.pageTape.setCornerWidget(self.tabButton)
+        self.tabButton.clicked.connect(self.addPage)
+        
+        
         self.pageTape.currentChanged.connect(self.changePage)
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.curPageInd + 1))
         self.setCentralWidget(self.pageTape)
