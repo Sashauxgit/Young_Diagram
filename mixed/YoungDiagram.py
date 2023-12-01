@@ -8,27 +8,27 @@ from PyQt5.QtGui import QPalette, QColor
 
 class SecondWidget(QWidget):
 
-    def workWithBackgroundColor(self):
+    def workWithBackgroundColor(self, alpha):
         #self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
         palette = QPalette()
-        palette.setColor(QPalette.Background, QColor(255,0,0,125))
+        palette.setColor(QPalette.Background, QColor(255,0,0,alpha))
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
 
-    def __init__(self, parent):
+    def __init__(self, parent, alpha):
         super().__init__(parent)
-        self.workWithBackgroundColor()
+        self.workWithBackgroundColor(alpha)
         self.setGeometry(0, 0, 1500, 800)
         
     def mouseReleaseEvent(self, event):
         #print(event.pos())
         cell = self.parent().itemAt(event.pos().x(), event.pos().y())
         
-        if cell.background().color() == self.parent().noColor:
-            cell.setBackground(self.parent().parent().curColor)
+        if cell.background().color() == self.parent().parent().parent().parent().noColor:
+            cell.setBackground(self.parent().parent().parent().parent().curColor)
         else:
-            cell.setBackground(self.parent().parent().noColor)
+            cell.setBackground(self.parent().parent().parent().parent().noColor)
 
 
 class CellTable(QTableWidget):
@@ -82,9 +82,6 @@ class CellTable(QTableWidget):
 
 
 class MainWindow(QMainWindow):
-    def initSecondWindow(self):
-        self.secondWindow = SecondWidget(self.pageTape[self.curPageInd])
-
     def __init__(self):
         super().__init__()
         self.setWindowTitle('YoungDraw')
@@ -119,7 +116,7 @@ class MainWindow(QMainWindow):
         self.pageTape.currentChanged.connect(self.changePage)
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.curPageInd + 1))
         self.setCentralWidget(self.pageTape)
-        #self.initSecondWindow()
+        self.secondWindows = [SecondWidget(self.curPage(), 125)]
 
         openAction.triggered.connect(self.openFile)
         saveAction.triggered.connect(self.saveFile)
@@ -163,6 +160,8 @@ class MainWindow(QMainWindow):
     def addPage(self):
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
+        self.secondWindows.append(SecondWidget(self.curPage(), 125 - 25 * self.pageTape.count()))
+        self.secondWindows[-1].show()
 
     def changePage(self):
         self.clearAction.triggered.disconnect(self.curPage().clearTable)
