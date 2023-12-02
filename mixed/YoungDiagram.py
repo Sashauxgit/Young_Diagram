@@ -32,10 +32,11 @@ class SecondWidget(QLabel):
         painter.end()
 
         self.pen = QPen()
-        self.pen.setWidth(15)
+        self.pen.setWidth(5)
         self.pen.setColor(QtGui.QColor('blue'))
         self.painter = QtGui.QPainter(self.pixmap())
         self.painter.setPen(self.pen)
+        self.painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
         self.last_x, self.last_y = None, None
     '''    
