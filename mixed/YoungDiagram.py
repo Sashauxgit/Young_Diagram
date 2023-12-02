@@ -1,12 +1,13 @@
 import sys
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QWidget,
+    QApplication, QMainWindow, QTableWidget, QWidget, QLabel,
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QPixmap, QPainter, QBrush
 
-class SecondWidget(QWidget):
+class SecondWidget(QLabel):
 
     def workWithBackgroundColor(self):
         #self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
@@ -18,9 +19,18 @@ class SecondWidget(QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.workWithBackgroundColor()
+        #self.workWithBackgroundColor()
         self.setGeometry(0, 0, 1500, 800)
-        
+        self.drowField = QPixmap(1500, 800)
+        self.drowField.fill(QColor(255,0,0,125))
+        self.setPixmap(self.drowField)
+
+        painter = QPainter(self.pixmap())
+        painter.setBrush(Qt.red)
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(500, 200, 5, 5)
+        painter.end()
+    '''    
     def mouseReleaseEvent(self, event):
         #print(event.pos())
         cell = self.parent().itemAt(event.pos().x(), event.pos().y())
@@ -29,6 +39,15 @@ class SecondWidget(QWidget):
             cell.setBackground(self.parent().parent().curColor)
         else:
             cell.setBackground(self.parent().parent().noColor)
+    '''
+    def mouseMoveEvent(self, e):
+        print(e.pos().x(), e.pos().y())
+        painter = QPainter(self.pixmap())
+        painter.setBrush(Qt.red)
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(e.pos().x(), e.pos().y(), 50, 50)
+        painter.end()
+        self.update()
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
