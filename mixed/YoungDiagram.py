@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPalette, QColor, QPixmap, QPainter, QBrush
+from PyQt5.QtGui import QPalette, QColor, QPixmap, QPainter, QPen, QBrush
 
 class SecondWidget(QLabel):
 
@@ -30,6 +30,14 @@ class SecondWidget(QLabel):
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(500, 200, 5, 5)
         painter.end()
+
+        self.pen = QPen()
+        self.pen.setWidth(15)
+        self.pen.setColor(QtGui.QColor('blue'))
+        self.painter = QtGui.QPainter(self.pixmap())
+        self.painter.setPen(self.pen)
+
+        self.last_x, self.last_y = None, None
     '''    
     def mouseReleaseEvent(self, event):
         #print(event.pos())
@@ -41,13 +49,22 @@ class SecondWidget(QLabel):
             cell.setBackground(self.parent().parent().noColor)
     '''
     def mouseMoveEvent(self, e):
-        print(e.pos().x(), e.pos().y())
-        painter = QPainter(self.pixmap())
-        painter.setBrush(Qt.red)
-        painter.setPen(Qt.NoPen)
-        painter.drawEllipse(e.pos().x(), e.pos().y(), 50, 50)
-        painter.end()
+        if self.last_x is None: # First event.
+            self.last_x = e.x()
+            self.last_y = e.y()
+            return # Ignore the first time.
+
+        self.painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
+        #self.painter.end()
         self.update()
+
+        # Update the origin for next time.
+        self.last_x = e.x()
+        self.last_y = e.y()
+
+    def mouseReleaseEvent(self, e):
+        self.last_x = None
+        self.last_y = None
 
 class MainWindow(QMainWindow):
     def initSecondWindow(self):
