@@ -129,6 +129,8 @@ class MainWindow(QMainWindow):
         #self.setWindowIcon(QIcon('./assets/usergroup.png'))
         self.setGeometry(100, 100, 1100, 800)
 
+        self.workWithCellField = False
+        self.addFlag = True
 
         self.panel = QMenuBar(self)
         self.setMenuBar(self.panel)
@@ -181,10 +183,14 @@ class MainWindow(QMainWindow):
         self.lay.addLayout(palitra)
         self.setCentralWidget(self.mainWidget)
 
-        self.workWithCellField = False
         self.addFlag = False
 
-    
+    def set_color(self, c):
+        if self.workWithCellField:
+            self.curColorForCell = QColor(c)
+        else:
+            self.set_pen_color(c)
+
     def set_pen_color(self, c):
         pen = QPen()
         pen.setWidth(3)
@@ -199,7 +205,7 @@ class MainWindow(QMainWindow):
     def add_palette_buttons(self, layout):
         for c in COLORS:
             b = QPaletteButton(c)
-            b.pressed.connect(lambda c=c: self.set_pen_color(c))
+            b.pressed.connect(lambda c=c: self.set_color(c))
             layout.addWidget(b)
     
     def openFile(self):
@@ -245,7 +251,10 @@ class MainWindow(QMainWindow):
         self.addFlag = False
 
     def changePage(self):
-        self.clearAction.triggered.disconnect(self.curPage().clearTable)
+        try:
+            self.clearAction.triggered.disconnect(self.curPage().clearTable)
+        except:
+            pass
         self.curPageInd = self.pageTape.currentIndex()
         self.clearAction.triggered.connect(self.curPage().clearTable)
         if not self.addFlag:
@@ -257,6 +266,10 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_S:
             self.workWithCellField = not self.workWithCellField
+    
+    def closeEvent(self, e):
+        self.secondWindows[self.curPageInd].painter.end()
+        e.accept()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
