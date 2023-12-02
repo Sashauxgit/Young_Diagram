@@ -31,17 +31,11 @@ class SecondWidget(QLabel):
         self.painter.setRenderHint(QPainter.Antialiasing)
 
         self.last_x, self.last_y = None, None
-    '''    
-    def mouseReleaseEvent(self, event):
-        #print(event.pos())
-        cell = self.parent().itemAt(event.pos().x(), event.pos().y())
-        
-        if cell.background().color() == self.parent().parent().parent().parent().noColor:
-            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
-        else:
-            cell.setBackground(self.parent().parent().noColor)
-    '''
+    
     def mouseMoveEvent(self, e):
+        if self.parent().parent().parent().parent().parent().workWithCellField:
+            return
+        
         if self.last_x is None: # First event.
             self.last_x = e.x()
             self.last_y = e.y()
@@ -56,8 +50,11 @@ class SecondWidget(QLabel):
         self.last_y = e.y()
 
     def mouseReleaseEvent(self, e):
-        self.last_x = None
-        self.last_y = None
+        if self.parent().parent().parent().parent().parent().workWithCellField:
+            self.parent().switchCell(e)
+        else:
+            self.last_x = None
+            self.last_y = None
 
 
 class QPaletteButton(QPushButton):
@@ -94,6 +91,8 @@ class CellTable(QTableWidget):
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.setItem(i, j, item)
+        
+        self.setFocusPolicy(Qt.NoFocus)
     
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
@@ -105,6 +104,13 @@ class CellTable(QTableWidget):
         for row in range(self.row_k):
             for col in range(self.column_k):
                 self.item(row, col).setBackground(self.parent().parent().parent().noColor)
+    
+    def switchCell(self, event):
+        cell = self.itemAt(event.pos().x(), event.pos().y())  
+        if cell.background().color() == self.parent().parent().parent().parent().noColor:
+            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
+        else:
+            cell.setBackground(self.parent().parent().parent().parent().noColor)
 
 
 class MainWindow(QMainWindow):
@@ -166,6 +172,9 @@ class MainWindow(QMainWindow):
         self.lay.addLayout(palitra)
         self.setCentralWidget(self.mainWidget)
 
+        self.workWithCellField = False
+        self.addFlag = False
+
     
     def set_pen_color(self, c):
         pen = QPen()
@@ -219,19 +228,26 @@ class MainWindow(QMainWindow):
         self.curColorForCell = QColorDialog.getColor()
     
     def addPage(self):
+        self.addFlag = True
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
         self.secondWindows.append(SecondWidget(self.curPage()))
         self.secondWindows[-1].show()
+        self.addFlag = False
 
     def changePage(self):
         self.clearAction.triggered.disconnect(self.curPage().clearTable)
         self.curPageInd = self.pageTape.currentIndex()
         self.clearAction.triggered.connect(self.curPage().clearTable)
-        self.set_pen_color(self.curColorForDrow)
+        if not self.addFlag:
+            self.set_pen_color(self.curColorForDrow)
     
     def curPage(self):
         return self.pageTape.widget(self.curPageInd)
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_S:
+            self.workWithCellField = not self.workWithCellField
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
