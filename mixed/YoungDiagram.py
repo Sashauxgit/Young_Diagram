@@ -34,6 +34,10 @@ class SecondWidget(QLabel):
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
+            if e.buttons() == Qt.LeftButton:
+                self.parent().fillCell(e)
+            if e.buttons() == Qt.RightButton:
+                self.parent().unfillCell(e)
             return
         
         if self.last_x is None: # First event.
@@ -51,7 +55,10 @@ class SecondWidget(QLabel):
 
     def mouseReleaseEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
-            self.parent().switchCell(e)
+            if e.button() == Qt.LeftButton:
+                self.parent().fillCell(e)
+            if e.button() == Qt.RightButton:
+                self.parent().unfillCell(e)
         else:
             self.last_x = None
             self.last_y = None
@@ -105,12 +112,14 @@ class CellTable(QTableWidget):
             for col in range(self.column_k):
                 self.item(row, col).setBackground(self.parent().parent().parent().noColor)
     
-    def switchCell(self, event):
+    def fillCell(self, event):
         cell = self.itemAt(event.pos().x(), event.pos().y())  
-        if cell.background().color() == self.parent().parent().parent().parent().noColor:
-            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
-        else:
-            cell.setBackground(self.parent().parent().parent().parent().noColor)
+        cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
+
+    
+    def unfillCell(self, event):
+        cell = self.itemAt(event.pos().x(), event.pos().y())  
+        cell.setBackground(self.parent().parent().parent().parent().noColor)
 
 
 class MainWindow(QMainWindow):
