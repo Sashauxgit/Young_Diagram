@@ -1,8 +1,8 @@
 import sys
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QWidget, QLabel,
-    QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog
+    QApplication, QMainWindow, QTableWidget, QWidget, QLabel, QFrame,
+    QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QVBoxLayout
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPalette, QColor, QPixmap, QPainter, QPen, QBrush
@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         
         # Работа с таблицей
         self.table = QTableWidget(self)
-        self.setCentralWidget(self.table)
+        #self.setCentralWidget(self.table)
         
         self.column_k = 300
         self.row_k = 300
@@ -130,6 +130,17 @@ class MainWindow(QMainWindow):
                 self.table.setItem(i, j, item)
         
         self.initSecondWindow()
+
+        # Работа с лайаутами
+        self.mainWidget = QWidget(self)
+        self.lay = QVBoxLayout(self.mainWidget)
+        self.mainWidget.setLayout(self.lay)
+        self.lay.addWidget(self.table)
+
+        panel = QFrame(self.mainWidget)
+        panel.setFixedHeight(100)
+        self.lay.addWidget(panel)
+        self.setCentralWidget(self.mainWidget)
     
     def cell_clicked(self):
         row = self.table.currentRow()
