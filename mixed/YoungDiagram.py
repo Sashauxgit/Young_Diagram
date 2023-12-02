@@ -32,7 +32,7 @@ class SecondWidget(QLabel):
         painter.end()
 
         self.pen = QPen()
-        self.pen.setWidth(5)
+        self.pen.setWidth(3)
         self.pen.setColor(QColor('blue'))
         self.painter = QPainter(self.pixmap())
         self.painter.setPen(self.pen)
@@ -159,10 +159,12 @@ class MainWindow(QMainWindow):
     
     def set_pen_color(self, c):
         pen = QPen()
-        pen.setWidth(5)
+        pen.setWidth(3)
         pen.setColor(QColor(c))
+        self.secondWindow.painter.end()
         self.secondWindow.painter = QPainter(self.secondWindow.pixmap())
         self.secondWindow.painter.setPen(pen)
+        self.secondWindow.painter.setRenderHint(QPainter.Antialiasing)
 
     def add_palette_buttons(self, layout):
         for c in COLORS:
