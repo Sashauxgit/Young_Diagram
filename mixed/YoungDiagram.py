@@ -8,28 +8,12 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
 
 class SecondWidget(QLabel):
-
-    def workWithBackgroundColor(self, alpha):
-        #self.setStyleSheet("background-color: rgba(255, 0, 0, 0.5)")
-        palette = QPalette()
-        palette.setColor(QPalette.Background, QColor(255,0,0,alpha))
-        self.setAutoFillBackground(True)
-        self.setPalette(palette)
-
-
-    def __init__(self, parent, alpha):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.workWithBackgroundColor(alpha)
         self.setGeometry(0, 0, 1500, 800)
         self.drowField = QPixmap(1500, 800)
-        self.drowField.fill(QColor(255,0,0,125))
+        self.drowField.fill(QColor(0,0,0,0))
         self.setPixmap(self.drowField)
-
-        painter = QPainter(self.pixmap())
-        painter.setBrush(Qt.red)
-        painter.setPen(Qt.NoPen)
-        painter.drawEllipse(500, 200, 5, 5)
-        painter.end()
 
         self.pen = QPen()
         self.pen.setWidth(3)
@@ -108,7 +92,7 @@ class CellTable(QTableWidget):
         for i in range(self.row_k):
             for j in range(self.column_k):
                 item = QTableWidgetItem(None)
-                item.setBackground(self.parent().parent().noColor)
+                item.setBackground(self.parent().parent().parent().noColor)
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.setItem(i, j, item)
@@ -158,14 +142,15 @@ class MainWindow(QMainWindow):
         self.curColor = QColor(255,100,0)
         self.noColor = QColor(255,255,255)
 
-        
-        #pagesSwitching = self.panel.addMenu("Pages")
-        #addPageAct = pagesSwitching.addAction("add page")
-        #addPageAct.triggered.connect(self.addPage)
+        # Работа с лайаутами
+        self.mainWidget = QWidget(self)
+        self.lay = QVBoxLayout(self.mainWidget)
+        self.mainWidget.setLayout(self.lay)
 
         # Работа со страницами:
         self.curPageInd = 0
-        self.pageTape = QTabWidget(self)
+        self.pageTape = QTabWidget(self.mainWidget)
+        self.lay.addWidget(self.pageTape)
         #self.pageTape.setTabsClosable(True)
 
         self.tabButton = QToolButton(self)
@@ -175,52 +160,36 @@ class MainWindow(QMainWindow):
         self.tabButton.setFont(font)
         self.pageTape.setCornerWidget(self.tabButton)
         self.tabButton.clicked.connect(self.addPage)
-        
-        self.initSecondWindow()
 
-        # Работа с лайаутами
-        self.mainWidget = QWidget(self)
-        self.lay = QVBoxLayout(self.mainWidget)
-        self.mainWidget.setLayout(self.lay)
-        self.lay.addWidget(self.table)
+        self.pageTape.currentChanged.connect(self.changePage)
+        self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.curPageInd + 1))
+        self.secondWindows = [SecondWidget(self.curPage())]
+
+        openAction.triggered.connect(self.openFile)
+        saveAction.triggered.connect(self.saveFile)
+        screenAction.triggered.connect(self.takeScreenshot)
+        self.clearAction.triggered.connect(self.curPage().clearTable)
 
         palitra = QHBoxLayout()
         self.add_palette_buttons(palitra)
         self.lay.addLayout(palitra)
         self.setCentralWidget(self.mainWidget)
 
-        self.pageTape.currentChanged.connect(self.changePage)
-        self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.curPageInd + 1))
-        self.setCentralWidget(self.pageTape)
-        self.secondWindows = [SecondWidget(self.curPage(), 125)]
-
-        openAction.triggered.connect(self.openFile)
-        saveAction.triggered.connect(self.saveFile)
-        screenAction.triggered.connect(self.takeScreenshot)
-        self.clearAction.triggered.connect(self.curPage().clearTable)
     
     def set_pen_color(self, c):
         pen = QPen()
         pen.setWidth(3)
         pen.setColor(QColor(c))
-        self.secondWindow.painter.end()
-        self.secondWindow.painter = QPainter(self.secondWindow.pixmap())
-        self.secondWindow.painter.setPen(pen)
-        self.secondWindow.painter.setRenderHint(QPainter.Antialiasing)
+        self.secondWindows[self.curPageInd].painter.end()
+        self.secondWindows[self.curPageInd].painter = QPainter(self.secondWindows[self.curPageInd].pixmap())
+        self.secondWindows[self.curPageInd].painter.setPen(pen)
+        self.secondWindows[self.curPageInd].painter.setRenderHint(QPainter.Antialiasing)
 
     def add_palette_buttons(self, layout):
         for c in COLORS:
             b = QPaletteButton(c)
             b.pressed.connect(lambda c=c: self.set_pen_color(c))
             layout.addWidget(b)
-    
-    def cell_clicked(self):
-        row = self.table.currentRow()
-        col = self.table.currentColumn()
-        if self.table.item(row, col).background().color() == self.noColor:
-            self.table.item(row, col).setBackground(self.curColor)
-        else:
-            self.table.item(row, col).setBackground(self.noColor)
     
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
@@ -259,7 +228,7 @@ class MainWindow(QMainWindow):
     def addPage(self):
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
-        self.secondWindows.append(SecondWidget(self.curPage(), 125 - 25 * self.pageTape.count()))
+        self.secondWindows.append(SecondWidget(self.curPage()))
         self.secondWindows[-1].show()
 
     def changePage(self):
