@@ -7,6 +7,14 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
 
+
+COLORS = [
+'#000000', '#141923', '#414168', '#3a7fa7', '#35e3e3', '#8fd970', '#5ebb49',
+'#458352', '#dcd37b', '#fffee5', '#ffd035', '#cc9245', '#a15c3e', '#a42f3b',
+'#f45b7a', '#c24998', '#81588d', '#bcb0c2', '#ffffff',
+]
+
+
 class SecondWidget(QLabel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -17,7 +25,7 @@ class SecondWidget(QLabel):
 
         self.pen = QPen()
         self.pen.setWidth(3)
-        self.pen.setColor(QColor('blue'))
+        self.pen.setColor(self.parent().parent().parent().parent().parent().curColorForDrow)
         self.painter = QPainter(self.pixmap())
         self.painter.setPen(self.pen)
         self.painter.setRenderHint(QPainter.Antialiasing)
@@ -29,7 +37,7 @@ class SecondWidget(QLabel):
         cell = self.parent().itemAt(event.pos().x(), event.pos().y())
         
         if cell.background().color() == self.parent().parent().parent().parent().noColor:
-            cell.setBackground(self.parent().parent().parent().parent().curColor)
+            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
         else:
             cell.setBackground(self.parent().parent().noColor)
     '''
@@ -50,13 +58,6 @@ class SecondWidget(QLabel):
     def mouseReleaseEvent(self, e):
         self.last_x = None
         self.last_y = None
-
-COLORS = [
-# 17 undertones https://lospec.com/palette-list/17undertones
-'#000000', '#141923', '#414168', '#3a7fa7', '#35e3e3', '#8fd970', '#5ebb49',
-'#458352', '#dcd37b', '#fffee5', '#ffd035', '#cc9245', '#a15c3e', '#a42f3b',
-'#f45b7a', '#c24998', '#81588d', '#bcb0c2', '#ffffff',
-]
 
 
 class QPaletteButton(QPushButton):
@@ -85,9 +86,6 @@ class CellTable(QTableWidget):
         
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
-        
-        self.cellClicked.connect(self.cell_clicked)
-        self.doubleClicked.connect(self.cell_clicked)
 
         for i in range(self.row_k):
             for j in range(self.column_k):
@@ -96,14 +94,6 @@ class CellTable(QTableWidget):
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.setItem(i, j, item)
-    
-    def cell_clicked(self):
-        row = self.currentRow()
-        col = self.currentColumn()
-        if self.item(row, col).background().color() == self.parent().parent().parent().noColor:
-            self.item(row, col).setBackground(self.parent().parent().parent().curColor)
-        else:
-            self.item(row, col).setBackground(self.parent().parent().parent().noColor)
     
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
@@ -139,7 +129,8 @@ class MainWindow(QMainWindow):
         paleteMenu = self.panel.addMenu("Palete")
         chooseColor = paleteMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
-        self.curColor = QColor(255,100,0)
+        self.curColorForCell = QColor(255,100,0)
+        self.curColorForDrow = QColor(0,0,0)
         self.noColor = QColor(255,255,255)
 
         # Работа с лайаутами
@@ -179,7 +170,9 @@ class MainWindow(QMainWindow):
     def set_pen_color(self, c):
         pen = QPen()
         pen.setWidth(3)
-        pen.setColor(QColor(c))
+        color = QColor(c)
+        pen.setColor(color)
+        self.curColorForDrow = color
         self.secondWindows[self.curPageInd].painter.end()
         self.secondWindows[self.curPageInd].painter = QPainter(self.secondWindows[self.curPageInd].pixmap())
         self.secondWindows[self.curPageInd].painter.setPen(pen)
@@ -223,7 +216,7 @@ class MainWindow(QMainWindow):
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.curColor = QColorDialog.getColor()
+        self.curColorForCell = QColorDialog.getColor()
     
     def addPage(self):
         self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
@@ -235,6 +228,7 @@ class MainWindow(QMainWindow):
         self.clearAction.triggered.disconnect(self.curPage().clearTable)
         self.curPageInd = self.pageTape.currentIndex()
         self.clearAction.triggered.connect(self.curPage().clearTable)
+        self.set_pen_color(self.curColorForDrow)
     
     def curPage(self):
         return self.pageTape.widget(self.curPageInd)
