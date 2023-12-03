@@ -2,7 +2,7 @@ import sys
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTableWidget, QWidget, QLabel, QPushButton, QTabWidget, QToolButton,
-    QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout
+QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout, QSlider, QDialog
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
@@ -24,7 +24,7 @@ class SecondWidget(QLabel):
         self.setPixmap(self.drowField)
 
         self.pen = QPen()
-        self.pen.setWidth(3)
+        self.pen.setWidth(self.parent().parent().parent().parent().parent().curThickness)
         self.pen.setColor(self.parent().parent().parent().parent().parent().curColorForDrow)
         self.painter = QPainter(self.pixmap())
         self.painter.setPen(self.pen)
@@ -121,6 +121,12 @@ class CellTable(QTableWidget):
         cell = self.itemAt(event.pos().x(), event.pos().y())  
         cell.setBackground(self.parent().parent().parent().parent().noColor)
 
+class ThickDialog(QDialog):
+    def closeEvent(self, e):
+        self.parent().demoPainter.end()
+        self.parent().set_pen_color(self.parent().curColorForDrow)
+        e.accept()
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -143,9 +149,14 @@ class MainWindow(QMainWindow):
         self.clearAction = menu.addAction("Clear field")
         
         # Работа с палитрой
-        paleteMenu = self.panel.addMenu("Palete")
-        chooseColor = paleteMenu.addAction("Choose color")
+        penMenu = self.panel.addMenu("Pen")
+        chooseColor = penMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
+
+        chooseThickness = penMenu.addAction("Choose thickness")
+        chooseThickness.triggered.connect(self.openThicknessDialog)
+
+        self.curThickness = 3
         self.curColorForCell = QColor(255,100,0)
         self.curColorForDrow = QColor(0,0,0)
         self.noColor = QColor(255,255,255)
@@ -193,7 +204,7 @@ class MainWindow(QMainWindow):
 
     def set_pen_color(self, c):
         pen = QPen()
-        pen.setWidth(3)
+        pen.setWidth(self.curThickness)
         color = QColor(c)
         pen.setColor(color)
         self.curColorForDrow = color
@@ -240,7 +251,58 @@ class MainWindow(QMainWindow):
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.curColorForCell = QColorDialog.getColor()
+        self.curColorForDrow = QColorDialog.getColor()
+    
+    def openThicknessDialog(self):
+        self.thickDialog = ThickDialog(self)
+        self.thickDialog.setWindowTitle('Pen thickness choosing')
+        self.thickDialog.setGeometry(225, 200, 900, 400)
+
+        sliderPlace = QWidget(self.thickDialog)
+        sliderPlace.setFixedHeight(70)
+        self.slider = QSlider(Qt.Orientation.Horizontal, sliderPlace)
+        self.slider.move(100, 35)
+        self.slider.setFixedWidth(800)
+        self.slider.setRange(1, 15)
+        self.slider.setValue(self.curThickness)
+        self.slider.setSingleStep(1)
+        self.slider.setTickInterval(1)
+        self.slider.valueChanged.connect(self.updateThickness)
+
+        dialogLayout = QVBoxLayout(self.thickDialog)
+        dialogLayout.addWidget(sliderPlace)
+        
+        self.demoLabel = QLabel(self.thickDialog)
+        pixmap = QPixmap(1000, 130)
+        pixmap.fill(QColor(0,0,0,0))
+        self.demoLabel.setPixmap(pixmap)
+        
+        pen = QPen()
+        pen.setWidth(self.curThickness)
+        pen.setColor(self.curColorForDrow)
+        
+        self.demoPainter = QPainter(self.demoLabel.pixmap())
+        self.demoPainter.setPen(pen)
+        self.demoPainter.setRenderHint(QPainter.Antialiasing)
+        self.demoPainter.drawPoint(500, 20)
+
+        dialogLayout.addWidget(self.demoLabel)
+        self.thickDialog.setLayout(dialogLayout)
+        self.thickDialog.show()
+    
+    def updateThickness(self):
+        self.curThickness = self.slider.value()
+
+        self.demoLabel.pixmap().fill(QColor(0,0,0,0))
+        
+        pen = QPen()
+        pen.setWidth(self.curThickness)
+        pen.setColor(self.curColorForDrow)
+        
+        self.demoPainter.setPen(pen)
+        self.demoPainter.drawPoint(500, 20)
+        self.thickDialog.update()
+
     
     def addPage(self):
         self.addFlag = True
