@@ -149,11 +149,11 @@ class MainWindow(QMainWindow):
         self.clearAction = menu.addAction("Clear field")
         
         # Работа с палитрой
-        penMenu = self.panel.addMenu("Pen")
-        chooseColor = penMenu.addAction("Choose color")
+        paramsMenu = self.panel.addMenu("Visual parameters")
+        chooseColor = paramsMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
 
-        chooseThickness = penMenu.addAction("Choose thickness")
+        chooseThickness = paramsMenu.addAction("Choose pen thickness")
         chooseThickness.triggered.connect(self.openThicknessDialog)
 
         self.curThickness = 3
@@ -251,7 +251,11 @@ class MainWindow(QMainWindow):
             screenshot.save(filename, 'png')
     
     def openColorDialog(self):
-        self.curColorForDrow = QColorDialog.getColor()
+        if self.workWithCellField:
+            self.curColorForCell = QColorDialog.getColor()
+        else:
+            self.curColorForDrow = QColorDialog.getColor()
+            self.set_pen_color(self.curColorForDrow)
     
     def openThicknessDialog(self):
         self.thickDialog = ThickDialog(self)
