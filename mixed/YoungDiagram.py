@@ -7,6 +7,9 @@ QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBo
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
 
+import pypdf as pdf
+from fpdf import FPDF
+
 
 COLORS = [
 '#000000', '#141923', '#414168', '#3a7fa7', '#35e3e3', '#8fd970', '#5ebb49',
@@ -106,13 +109,13 @@ class CellTable(QTableWidget):
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
         r, g, b, _ = color.getRgb()
-        if color != self.parent().parent().parent().noColor:
+        if color != self.parent().parent().parent().parent().noColor:
             return "{};{};{};{};{}\n".format(row, column, r, g, b)
     
     def clearTable(self):
         for row in range(self.row_k):
             for col in range(self.column_k):
-                self.item(row, col).setBackground(self.parent().parent().parent().noColor)
+                self.item(row, col).setBackground(self.parent().parent().parent().parent().noColor)
     
     def fillCell(self, event):
         cell = self.itemAt(event.pos().x(), event.pos().y())  
@@ -147,6 +150,7 @@ class MainWindow(QMainWindow):
         menu = self.panel.addMenu("Menu")
         openAction = menu.addAction("Open diagram")
         saveAction = menu.addAction("Save diagram")
+        exportPdfAction = menu.addAction("Export to PDF")
         screenAction = menu.addAction("Take screenshot")
         self.clearAction = menu.addAction("Clear field")
         
@@ -191,8 +195,9 @@ class MainWindow(QMainWindow):
 
         openAction.triggered.connect(self.openFile)
         saveAction.triggered.connect(self.saveFile)
+        exportPdfAction.triggered.connect(self.exportPDF)
         screenAction.triggered.connect(self.takeScreenshot)
-        self.clearAction.triggered.connect(self.curPage().clearTable)
+        self.clearAction.triggered.connect(self.clearField)
 
         palitra = QHBoxLayout()
         self.add_palette_buttons(palitra)
@@ -249,11 +254,34 @@ class MainWindow(QMainWindow):
                         if cellInStr != None:
                             file.write(cellInStr)
     
+    def exportPDF(self):
+        filename, _ = QFileDialog.getSaveFileName(self, "Export to PDF", ".", "PDF Files (*.pdf)")
+        if filename:
+            if '.pdf' not in filename:
+                filename += '.pdf'
+
+            for i in range(len(self.secondWindows)):
+                img = self.pageTape.widget(i).grab()
+                img.save(f"young_reserve_page_picture_{i}.png")
+            
+            pdf = FPDF()
+            for i in range(len(self.secondWindows)):
+                pdf.add_page('landscape', (float(self.curPage().height()), float(self.curPage().width())))
+                pdf.image(f"young_reserve_page_picture_{i}.png", h = self.curPage().height(), w = self.curPage().width())
+
+            pdf.output(filename)
+    
     def takeScreenshot(self):
         screenshot = self.curPage().grab()
         filename, _ = QFileDialog.getSaveFileName(self, "Save screenshot", ".", "Image Files (*.png)")
         if filename:
             screenshot.save(filename, 'png')
+    
+    def clearField(self):
+        self.curPage().clearTable()
+        self.secondWindows[self.curPageInd].close()
+        self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
+        self.secondWindows[self.curPageInd].show()
     
     def openColorDialog(self):
         if self.workWithCellField:
