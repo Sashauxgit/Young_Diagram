@@ -78,15 +78,17 @@ class CellTable(QTableWidget):
         #self.table.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, self.table.size(), self.geometry()))
 
         self.column_k = 23
-        self.row_k = 14
+        self.row_k = 10
 
         self.setColumnCount(self.column_k)
         self.setRowCount(self.row_k)
         
         for i in range(self.row_k):
-            self.setRowHeight(i, 40)
+            self.setRowHeight(i, 50)
         for i in range(self.column_k):
-            self.setColumnWidth(i, 40)
+            self.setColumnWidth(i, 50)
+
+        self.setStyleSheet("QTableWidget::item { width: 30px; height: 30px; }")
         
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
