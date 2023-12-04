@@ -152,7 +152,8 @@ class MainWindow(QMainWindow):
         saveAction = menu.addAction("Save diagram")
         exportPdfAction = menu.addAction("Export to PDF")
         screenAction = menu.addAction("Take screenshot")
-        self.clearAction = menu.addAction("Clear field")
+        self.clearAction = menu.addAction("Clear current page")
+        self.resetAction = menu.addAction("Full reset pages")
         
         # Работа с палитрой
         paramsMenu = self.panel.addMenu("Display parameters")
@@ -198,6 +199,7 @@ class MainWindow(QMainWindow):
         exportPdfAction.triggered.connect(self.exportPDF)
         screenAction.triggered.connect(self.takeScreenshot)
         self.clearAction.triggered.connect(self.clearField)
+        self.resetAction.triggered.connect(self.fullReset)
 
         palitra = QHBoxLayout()
         self.add_palette_buttons(palitra)
@@ -283,6 +285,15 @@ class MainWindow(QMainWindow):
         self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
         self.secondWindows[self.curPageInd].show()
     
+    def fullReset(self):
+        self.pageTape.setCurrentIndex(0)
+        pageCount = self.pageTape.count()
+        for i in range(1, pageCount):
+            self.pageTape.removeTab(1)
+            self.secondWindows.pop(1)
+        
+        self.clearField()
+
     def openColorDialog(self):
         if self.workWithCellField:
             self.curColorForCell = QColorDialog.getColor()
