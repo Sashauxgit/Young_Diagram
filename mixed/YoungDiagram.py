@@ -151,12 +151,15 @@ class MainWindow(QMainWindow):
         self.clearAction = menu.addAction("Clear field")
         
         # Работа с палитрой
-        paramsMenu = self.panel.addMenu("Visual parameters")
+        paramsMenu = self.panel.addMenu("Display parameters")
         chooseColor = paramsMenu.addAction("Choose color")
         chooseColor.triggered.connect(self.openColorDialog)
 
         chooseThickness = paramsMenu.addAction("Choose pen thickness")
         chooseThickness.triggered.connect(self.openThicknessDialog)
+
+        self.switchToCellAct = self.panel.addAction("Switch to working with cells")
+        self.switchToCellAct.triggered.connect(self.switchMode)
 
         self.curThickness = 3
         self.curColorForCell = QColor(255,100,0)
@@ -330,10 +333,17 @@ class MainWindow(QMainWindow):
     
     def curPage(self):
         return self.pageTape.widget(self.curPageInd)
+    
+    def switchMode(self):
+        self.workWithCellField = not self.workWithCellField
+        if self.workWithCellField:
+            self.switchToCellAct.setText("Switch to drawing")
+        else:
+            self.switchToCellAct.setText("Switch to working with cells")
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_S:
-            self.workWithCellField = not self.workWithCellField
+            self.switchMode()
     
     def closeEvent(self, e):
         self.secondWindows[self.curPageInd].painter.end()
