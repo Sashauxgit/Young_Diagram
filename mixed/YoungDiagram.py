@@ -34,6 +34,8 @@ class SecondWidget(QLabel):
         self.painter.setRenderHint(QPainter.Antialiasing)
 
         self.last_x, self.last_y = None, None
+
+        self.paintingForSave = []
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
@@ -46,9 +48,12 @@ class SecondWidget(QLabel):
         if self.last_x is None: # First event.
             self.last_x = e.x()
             self.last_y = e.y()
+            line = [(self.last_x, self.last_x)]
+            self.paintingForSave.append(line)
             return # Ignore the first time.
 
         self.painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
+        self.paintingForSave[-1].append((e.x(), e.y()))
         #self.painter.end()
         self.update()
 
@@ -65,6 +70,20 @@ class SecondWidget(QLabel):
         else:
             self.last_x = None
             self.last_y = None
+
+            c = self.parent().parent().parent().parent().parent().curColorForDrow
+            self.paintingForSave[-1].append((c.red(), c.green(), c.blue()))
+    
+    def wheelEvent(self, e):
+        workSpace = self.parent().parent().parent().parent().parent()
+        if e.angleDelta().y() > 0:
+            newInd = workSpace.curPageInd - 1
+        else:
+            newInd = workSpace.curPageInd + 1
+        
+        if newInd >= 0 or newInd < workSpace.pageTape.count():
+            workSpace.pageTape.setCurrentIndex(newInd)
+
 
 
 class QPaletteButton(QPushButton):
@@ -250,11 +269,20 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
         if filename:
             with open(filename, 'w') as file:
-                for row in range(self.curPage().row_k):
-                    for col in range(self.curPage().column_k):
-                        cellInStr = self.curPage().cellWrite(row, col)
-                        if cellInStr != None:
-                            file.write(cellInStr)
+                # self.pageTape.widget(i)
+                # self.secondWindows[i]
+                for i in range(self.pageTape.count()):
+                    for vec in self.secondWindows[i].paintingForSave:
+                        file.write(str(vec))
+                        file.write("\n")
+                    file.write("\n")
+                    for row in range(self.pageTape.widget(i).row_k):
+                        for col in range(self.pageTape.widget(i).column_k):
+                            cellInStr = self.pageTape.widget(i).cellWrite(row, col)
+                            if cellInStr != None:
+                                file.write(cellInStr)
+                    file.write("---\n---\n")
+                file.write("EOF")
     
     def exportPDF(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Export to PDF", ".", "PDF Files (*.pdf)")
@@ -381,8 +409,16 @@ class MainWindow(QMainWindow):
             self.switchToCellAct.setText("Switch to working with cells")
 
     def keyPressEvent(self, e):
-        if e.key() == Qt.Key_S:
+        if e.key() == Qt.Key_Up or e.key() == Qt.Key_Down:
             self.switchMode()
+        
+        if e.key() == Qt.Key_Left and self.curPageInd > 0:
+            self.pageTape.setCurrentIndex(self.curPageInd - 1)
+        
+        if e.key() == Qt.Key_Right and self.curPageInd < self.pageTape.count() - 1:
+            self.pageTape.setCurrentIndex(self.curPageInd + 1)
+
+            
     
     def closeEvent(self, e):
         self.secondWindows[self.curPageInd].painter.end()
