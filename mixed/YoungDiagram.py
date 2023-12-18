@@ -19,7 +19,7 @@ COLORS = [
 
 
 class SecondWidget(QLabel):
-    def __init__(self, parent):
+    def __init__(self, parent, data = None):
         super().__init__(parent)
         self.setGeometry(0, 0, 1500, 800)
         self.drowField = QPixmap(1500, 800)
@@ -36,6 +36,42 @@ class SecondWidget(QLabel):
         self.last_x, self.last_y = None, None
 
         self.paintingForSave = []
+
+        if data != None:
+            self.loadPaint(data)
+    
+    def loadPaint(self, data):
+        vecs = data.split("\n")
+        for vec in vecs:
+            coords = vec[1:len(vec) - 1].split("), ")
+            if len(coords) > 1:
+                color = coords[-1][1:len(coords[-1]) - 1].split(", ")
+                color = QColor(int(color[0]), int(color[1]), int(color[2]))
+                coords = coords[0:len(coords) - 1]
+
+                for coord in coords:
+                    coord = coord[1:].split(", ")
+                    self.parent().parent().parent().parent().parent().set_pen_color(color, self)
+                    self.toPaint(int(coord[0]), int(coord[1]))
+                self.last_x = None
+                self.last_y = None
+                self.paintingForSave[-1].append((color.red(), color.green(), color.blue()))
+    
+    def toPaint(self, x, y):
+        if self.last_x is None:
+            self.last_x = x
+            self.last_y = y
+            line = [(self.last_x, self.last_y)]
+            self.paintingForSave.append(line)
+            return
+
+        self.painter.drawLine(self.last_x, self.last_y, x, y)
+        self.paintingForSave[-1].append((x, y))
+        #self.painter.end()
+        #self.update()
+
+        self.last_x = x
+        self.last_y = y
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
@@ -48,7 +84,7 @@ class SecondWidget(QLabel):
         if self.last_x is None: # First event.
             self.last_x = e.x()
             self.last_y = e.y()
-            line = [(self.last_x, self.last_x)]
+            line = [(self.last_x, self.last_y)]
             self.paintingForSave.append(line)
             return # Ignore the first time.
 
@@ -71,8 +107,9 @@ class SecondWidget(QLabel):
             self.last_x = None
             self.last_y = None
 
-            c = self.parent().parent().parent().parent().parent().curColorForDrow
-            self.paintingForSave[-1].append((c.red(), c.green(), c.blue()))
+            if len(self.paintingForSave) > 0:
+                c = self.parent().parent().parent().parent().parent().curColorForDrow
+                self.paintingForSave[-1].append((c.red(), c.green(), c.blue()))
     
     def wheelEvent(self, e):
         workSpace = self.parent().parent().parent().parent().parent()
@@ -95,24 +132,27 @@ class QPaletteButton(QPushButton):
 
 
 class CellTable(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, initData = None):
         super().__init__(parent)
         #self.table.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, self.table.size(), self.geometry()))
 
-        self.column_k = 23
-        self.row_k = 10
+        self.column_k = 41
+        self.row_k = 17
 
         self.setColumnCount(self.column_k)
         self.setRowCount(self.row_k)
         
-        for i in range(self.row_k):
-            self.setRowHeight(i, 50)
-        for i in range(self.column_k):
-            self.setColumnWidth(i, 50)
-
-        self.setStyleSheet("QTableWidget::item { width: 30px; height: 30px; }")
+        #for i in range(self.row_k):
+        #    self.setRowHeight(i, 30)
+        #for i in range(self.column_k):
+        #    self.setColumnWidth(i, 50)
         
+        self.horizontalHeader().setMinimumSectionSize(30)
+        self.horizontalHeader().setDefaultSectionSize(32)
         self.horizontalHeader().hide()
+        
+        self.verticalHeader().setMinimumSectionSize(30)
+        self.verticalHeader().setDefaultSectionSize(32)
         self.verticalHeader().hide()
 
         for i in range(self.row_k):
@@ -124,6 +164,17 @@ class CellTable(QTableWidget):
                 self.setItem(i, j, item)
         
         self.setFocusPolicy(Qt.NoFocus)
+
+        if initData != None:
+            self.init(initData)
+    
+    def init(self, data):
+        coords = data.split("\n")
+        if coords[-1] == '':
+            coords.pop()
+            for coord in coords:
+                row, col, r, g, b = tuple(map(int, coord.split(";")))
+                self.item(row, col).setBackground(QColor(r,g,b))
     
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
@@ -233,16 +284,19 @@ class MainWindow(QMainWindow):
         else:
             self.set_pen_color(c)
 
-    def set_pen_color(self, c):
+    def set_pen_color(self, c, workSpace = None):
         pen = QPen()
         pen.setWidth(self.curThickness)
         color = QColor(c)
         pen.setColor(color)
-        self.curColorForDrow = color
-        self.secondWindows[self.curPageInd].painter.end()
-        self.secondWindows[self.curPageInd].painter = QPainter(self.secondWindows[self.curPageInd].pixmap())
-        self.secondWindows[self.curPageInd].painter.setPen(pen)
-        self.secondWindows[self.curPageInd].painter.setRenderHint(QPainter.Antialiasing)
+
+        if workSpace == None:
+            self.curColorForDrow = color
+            workSpace = self.secondWindows[self.curPageInd]
+        workSpace.painter.end()
+        workSpace.painter = QPainter(workSpace.pixmap())
+        workSpace.painter.setPen(pen)
+        workSpace.painter.setRenderHint(QPainter.Antialiasing)
 
     def add_palette_buttons(self, layout):
         for c in COLORS:
@@ -253,17 +307,21 @@ class MainWindow(QMainWindow):
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
         if filename:
-            try:
-                self.curPage().clearTable()
+            #try:
+                self.fullReset()
                 with open(filename, 'r') as file:
-                    coords = file.read().split("\n")
-                    if coords[-1] == '':
-                        coords.pop()
-                    for coord in coords:
-                            row, col, r, g, b = tuple(map(int, coord.split(";")))
-                            self.curPage().item(row, col).setBackground(QColor(r,g,b))
-            except:
-                raise ValueError("Incorrect file values")        
+                    pageValues = file.read().split("---\n---\n")
+                    pageValues.remove('')
+                    for page in pageValues:
+                        parts = page.split("\n\n")
+                        print(parts[0])
+                        self.addPage(parts[0], parts[1])
+                
+                self.pageTape.removeTab(0)
+                self.secondWindows.pop(0)
+                    
+            #except:
+                #raise ValueError("Incorrect file values")        
     
     def saveFile(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
@@ -276,13 +334,15 @@ class MainWindow(QMainWindow):
                         file.write(str(vec))
                         file.write("\n")
                     file.write("\n")
+                    if len(self.secondWindows[i].paintingForSave) == 0:
+                        file.write("\n")
                     for row in range(self.pageTape.widget(i).row_k):
                         for col in range(self.pageTape.widget(i).column_k):
                             cellInStr = self.pageTape.widget(i).cellWrite(row, col)
                             if cellInStr != None:
                                 file.write(cellInStr)
                     file.write("---\n---\n")
-                file.write("EOF")
+                #file.write("EOF")
     
     def exportPDF(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Export to PDF", ".", "PDF Files (*.pdf)")
@@ -380,11 +440,13 @@ class MainWindow(QMainWindow):
         self.thickDialog.update()
 
     
-    def addPage(self):
+    def addPage(self, drowData = None, cellData = None):
         self.addFlag = True
-        self.pageTape.addTab(CellTable(self.pageTape), 'Страница {}'.format(self.pageTape.count() + 1))
+        self.pageTape.addTab(CellTable(self.pageTape, cellData), 'Страница {}'.format(self.pageTape.count() + 1))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
-        self.secondWindows.append(SecondWidget(self.curPage()))
+        if type(drowData) == bool:
+            drowData = None
+        self.secondWindows.append(SecondWidget(self.curPage(), drowData))
         self.secondWindows[-1].show()
         self.addFlag = False
 
@@ -394,6 +456,7 @@ class MainWindow(QMainWindow):
         except:
             pass
         self.curPageInd = self.pageTape.currentIndex()
+        #print(self.curPageInd) #
         self.clearAction.triggered.connect(self.curPage().clearTable)
         if not self.addFlag:
             self.set_pen_color(self.curColorForDrow)
