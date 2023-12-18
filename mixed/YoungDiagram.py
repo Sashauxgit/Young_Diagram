@@ -308,7 +308,7 @@ class MainWindow(QMainWindow):
     def openFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
         if filename:
-            #try:
+            try:
                 self.fullReset()
                 with open(filename, 'r') as file:
                     pageValues = file.read().split("---\n---\n")
@@ -320,8 +320,13 @@ class MainWindow(QMainWindow):
                 self.pageTape.removeTab(0)
                 self.secondWindows.pop(0)
                     
-            #except:
-                #raise ValueError("Incorrect file values")        
+            except:
+                er = QMessageBox(self)
+                er.setWindowTitle("Ошибка")
+                er.setText("Ошибка чтения файла. Файл некорректен.")
+                er.setStandardButtons(QMessageBox.Ok)
+                er.setIcon(QMessageBox.Critical)
+                er.exec()       
     
     def saveFile(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
