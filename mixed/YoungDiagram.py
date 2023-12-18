@@ -1,7 +1,7 @@
 import sys
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTableWidget, QWidget, QLabel, QPushButton, QTabWidget, QToolButton,
+    QApplication, QMainWindow, QTableWidget, QWidget, QLabel, QPushButton, QTabWidget, QToolButton, QMessageBox,
 QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout, QSlider, QDialog
 )
 from PyQt5.QtCore import Qt, QSize
@@ -343,6 +343,8 @@ class MainWindow(QMainWindow):
                                 file.write(cellInStr)
                     file.write("---\n---\n")
                 #file.write("EOF")
+            return True
+        return False
     
     def exportPDF(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Export to PDF", ".", "PDF Files (*.pdf)")
@@ -361,6 +363,8 @@ class MainWindow(QMainWindow):
                 remove(f"young_reserve_page_picture_{i}.png")
 
             pdf.output(filename)
+            return True
+        return False
     
     def takeScreenshot(self):
         screenshot = self.curPage().grab()
@@ -375,6 +379,9 @@ class MainWindow(QMainWindow):
         self.secondWindows[self.curPageInd].show()
     
     def fullReset(self):
+        if not self.saveQuestion():
+            return
+
         self.pageTape.setCurrentIndex(0)
         pageCount = self.pageTape.count()
         for i in range(1, pageCount):
@@ -481,12 +488,28 @@ class MainWindow(QMainWindow):
         
         if e.key() == Qt.Key_Right and self.curPageInd < self.pageTape.count() - 1:
             self.pageTape.setCurrentIndex(self.curPageInd + 1)
+    
+    def saveQuestion(self):
 
-            
+        reply = QMessageBox.question(self,\
+            'Young diagram redactor',\
+            "The data could be lost! Do you want export this data to PDF?",\
+            QMessageBox.Yes | QMessageBox.Ignore | QMessageBox.Save | QMessageBox.Cancel
+        )
+        if reply == QMessageBox.Cancel:
+            return False
+        if reply == QMessageBox.Save:
+            return self.saveFile()
+        if reply == QMessageBox.Yes:
+            return self.exportPDF()
+        return True
     
     def closeEvent(self, e):
-        self.secondWindows[self.curPageInd].painter.end()
-        e.accept()
+        if self.saveQuestion():
+            self.secondWindows[self.curPageInd].painter.end()
+            e.accept()
+        else:
+            e.ignore()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
