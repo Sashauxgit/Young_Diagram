@@ -9,6 +9,7 @@ from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
 
 import pypdf as pdf
 from fpdf import FPDF
+from os import remove
 
 
 COLORS = [
@@ -357,6 +358,7 @@ class MainWindow(QMainWindow):
             for i in range(len(self.secondWindows)):
                 pdf.add_page('landscape', (float(self.curPage().height()), float(self.curPage().width())))
                 pdf.image(f"young_reserve_page_picture_{i}.png", h = self.curPage().height(), w = self.curPage().width())
+                remove(f"young_reserve_page_picture_{i}.png")
 
             pdf.output(filename)
     
