@@ -314,8 +314,7 @@ class MainWindow(QMainWindow):
                     pageValues.remove('')
                     for page in pageValues:
                         parts = page.split("\n\n")
-                        print(parts[0])
-                        self.addPage(parts[0], parts[1])
+                        self.addPage(parts[0], parts[1], 0)
                 
                 self.pageTape.removeTab(0)
                 self.secondWindows.pop(0)
@@ -440,9 +439,9 @@ class MainWindow(QMainWindow):
         self.thickDialog.update()
 
     
-    def addPage(self, drowData = None, cellData = None):
+    def addPage(self, drowData = None, cellData = None, pageNumPolicy = 1):
         self.addFlag = True
-        self.pageTape.addTab(CellTable(self.pageTape, cellData), 'Страница {}'.format(self.pageTape.count() + 1))
+        self.pageTape.addTab(CellTable(self.pageTape, cellData), 'Страница {}'.format(self.pageTape.count() + pageNumPolicy))
         self.pageTape.setCurrentIndex(self.pageTape.count() - 1)
         if type(drowData) == bool:
             drowData = None
