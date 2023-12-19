@@ -189,8 +189,9 @@ class CellTable(QTableWidget):
                 self.item(row, col).setBackground(self.parent().parent().parent().parent().noColor)
     
     def fillCell(self, event):
-        cell = self.itemAt(event.pos().x(), event.pos().y())  
-        cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
+        cell = self.itemAt(event.pos().x(), event.pos().y())
+        if cell != None:
+            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
 
     
     def unfillCell(self, event):
@@ -306,10 +307,13 @@ class MainWindow(QMainWindow):
             layout.addWidget(b)
     
     def openFile(self):
+        if not self.saveQuestion():
+            return
+
         filename, _ = QFileDialog.getOpenFileName(self, "Open File", ".", "Young Files (*.young)")
         if filename:
             try:
-                self.fullReset()
+                self.fullReset(ask = "noAsk")
                 with open(filename, 'r') as file:
                     pageValues = file.read().split("---\n---\n")
                     pageValues.remove('')
@@ -377,14 +381,17 @@ class MainWindow(QMainWindow):
         if filename:
             screenshot.save(filename, 'png')
     
-    def clearField(self):
+    def clearField(self, ask):
+        if ask != "noAsk" and not self.saveQuestion():
+            return
+
         self.curPage().clearTable()
         self.secondWindows[self.curPageInd].close()
         self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
         self.secondWindows[self.curPageInd].show()
     
-    def fullReset(self):
-        if not self.saveQuestion():
+    def fullReset(self, ask):
+        if ask != "noAsk" and not self.saveQuestion():
             return
 
         self.pageTape.setCurrentIndex(0)
@@ -393,7 +400,7 @@ class MainWindow(QMainWindow):
             self.pageTape.removeTab(1)
             self.secondWindows.pop(1)
         
-        self.clearField()
+        self.clearField(ask = "noAsk")
 
     def openColorDialog(self):
         if self.workWithCellField:
