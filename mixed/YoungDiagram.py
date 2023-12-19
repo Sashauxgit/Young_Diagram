@@ -222,19 +222,24 @@ class CellTable(QTableWidget):
         if coords[-1] == '':
             coords.pop()
             for coord in coords:
-                row, col, r, g, b = tuple(map(int, coord.split(";")))
+                row, col, r, g, b = tuple(map(int, coord.split(";")[:-1]))
                 self.item(row, col).setBackground(QColor(r,g,b))
+
+                text = coord.split(";")[-1]
+                if text != None and text != '':
+                    self.item(row, col).setText(str(text))
     
     def cellWrite(self, row, column):
         color = self.item(row, column).background().color()
         r, g, b, _ = color.getRgb()
-        if color != self.parent().parent().parent().parent().noColor:
-            return "{};{};{};{};{}\n".format(row, column, r, g, b)
+        if color != self.parent().parent().parent().parent().noColor or self.item(row, column).text() != "":
+            return "{};{};{};{};{};{}\n".format(row, column, r, g, b, self.item(row, column).text())
     
     def clearTable(self):
         for row in range(self.row_k):
             for col in range(self.column_k):
                 self.item(row, col).setBackground(self.parent().parent().parent().parent().noColor)
+                self.item(row, col).setText('')
     
     def fillCell(self, event):
         cell = self.itemAt(event.pos().x(), event.pos().y())
