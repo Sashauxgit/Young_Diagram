@@ -2,14 +2,31 @@ import sys
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTableWidget, QWidget, QLabel, QPushButton, QTabWidget, QToolButton, QMessageBox,
-QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout, QSlider, QDialog
+QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout, QSlider, QDialog, QLineEdit
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush
+from PyQt5.QtGui import QMouseEvent, QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush, QIntValidator
 
-import pypdf as pdf
+import traceback as tr
 from fpdf import FPDF
 from os import remove
+
+
+def exception_hook(type, message, tb):
+    er = QMessageBox(window)
+    er.setWindowTitle("Ошибка")
+    er.setText("An unexpected error occurred in the program! Detalis:\n"
+f"\nStack:\n{''.join(tr.format_list(tr.extract_tb(tb)))}\n"
+f"Error type: {type}\n"
+f"Error message: {message}\n\n"
+"The data could be lost! Do you want to save it?")
+    er.setStandardButtons(QMessageBox.Save | QMessageBox.Ignore)
+    er.setIcon(QMessageBox.Critical)
+    reply = er.exec()
+    if reply == QMessageBox.Save:
+        window.saveFile()
+
+sys.excepthook = exception_hook
 
 
 COLORS = [
@@ -17,6 +34,29 @@ COLORS = [
 '#458352', '#dcd37b', '#fffee5', '#ffd035', '#cc9245', '#a15c3e', '#a42f3b',
 '#f45b7a', '#c24998', '#81588d', '#bcb0c2', '#ffffff',
 ]
+
+
+class NumLineEdit(QLineEdit):
+    def __init__(self, parent, coord_x, coord_y):
+        super().__init__(parent)
+        self.setGeometry(coord_x, coord_y, 40, 30)
+        self.setFont(QFont("Times new roman", 20))
+        validator = QIntValidator(0, 99, self)
+        self.setValidator(validator)
+
+        self.coord_x = coord_x
+        self.coord_y = coord_y
+
+        self.setFocus()
+        self.show()
+    
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Return:
+            self.parent().parent().setTextCell(self.coord_x, self.coord_y, self.text())
+            self.parent().parent().update()
+            self.close()
+        else:
+            super().keyPressEvent(e)
 
 
 class SecondWidget(QLabel):
@@ -73,6 +113,12 @@ class SecondWidget(QLabel):
 
         self.last_x = x
         self.last_y = y
+    
+    def mouseDoubleClickEvent(self, e):
+        if self.parent().parent().parent().parent().parent().workWithCellField:
+            super().mouseDoubleClickEvent(e)
+            return
+        self.editLine = NumLineEdit(self, e.x(), e.y())
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
@@ -160,6 +206,8 @@ class CellTable(QTableWidget):
             for j in range(self.column_k):
                 item = QTableWidgetItem(None)
                 item.setBackground(self.parent().parent().parent().noColor)
+                item.setFont(QFont("Times new roman", 15))
+                item.setTextAlignment(Qt.AlignCenter)
                 # execute the line below to every item you need locked
                 item.setFlags(Qt.ItemIsEnabled)
                 self.setItem(i, j, item)
@@ -193,6 +241,10 @@ class CellTable(QTableWidget):
         if cell != None:
             cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
 
+    def setTextCell(self, x, y, text):
+        cell = self.itemAt(x, y)
+        if cell != None:
+            cell.setText(text)
     
     def unfillCell(self, event):
         cell = self.itemAt(event.pos().x(), event.pos().y())  
@@ -235,7 +287,7 @@ class MainWindow(QMainWindow):
         chooseThickness = paramsMenu.addAction("Choose pen thickness")
         chooseThickness.triggered.connect(self.openThicknessDialog)
 
-        self.switchToCellAct = self.panel.addAction("Switch to working with cells")
+        self.switchToCellAct = self.panel.addAction("Drow mode")
         self.switchToCellAct.triggered.connect(self.switchMode)
 
         self.curThickness = 3
@@ -487,9 +539,9 @@ class MainWindow(QMainWindow):
     def switchMode(self):
         self.workWithCellField = not self.workWithCellField
         if self.workWithCellField:
-            self.switchToCellAct.setText("Switch to drawing")
+            self.switchToCellAct.setText("Young mode")
         else:
-            self.switchToCellAct.setText("Switch to working with cells")
+            self.switchToCellAct.setText("Drow mode")
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Up or e.key() == Qt.Key_Down:
@@ -505,7 +557,7 @@ class MainWindow(QMainWindow):
 
         reply = QMessageBox.question(self,\
             'Young diagram redactor',\
-            "The data could be lost! Do you want export this data to PDF?",\
+            "The data could be lost! Do you want to export this data to PDF?",\
             QMessageBox.Yes | QMessageBox.Ignore | QMessageBox.Save | QMessageBox.Cancel
         )
         if reply == QMessageBox.Cancel:
