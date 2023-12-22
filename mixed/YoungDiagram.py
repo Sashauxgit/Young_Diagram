@@ -94,27 +94,34 @@ class SecondWidget(QLabel):
             coords = vec[1:len(vec) - 1].split("), ")
             if len(coords) > 1:
                 color = coords[-1][1:len(coords[-1]) - 1].split(", ")
+                thickness = int(color[3])
                 color = QColor(int(color[0]), int(color[1]), int(color[2]))
                 coords = coords[0:len(coords) - 1]
 
                 for coord in coords:
                     coord = coord[1:].split(", ")
+                    reserveThickness = self.parent().parent().parent().parent().parent().curThickness
+                    self.parent().parent().parent().parent().parent().curThickness = thickness
                     self.parent().parent().parent().parent().parent().set_pen_color(color, self)
                     self.toPaint(int(coord[0]), int(coord[1]))
+                    self.parent().parent().parent().parent().parent().curThickness = reserveThickness
                 self.last_x = None
                 self.last_y = None
-                self.paintingForSave[-1].append((color.red(), color.green(), color.blue()))
+                self.paintingForSave[-1].append((color.red(), color.green(), color.blue(), thickness))
     
     def redrow(self, data):
         for vec in data:
             color = QColor(vec[-1][0], vec[-1][1], vec[-1][2])
             coords = vec[:-1]
             for coord in coords:
-                    self.parent().parent().parent().parent().parent().set_pen_color(color, self)
-                    self.toPaint(coord[0], coord[1])
+                reserveThickness = self.parent().parent().parent().parent().parent().curThickness
+                self.parent().parent().parent().parent().parent().curThickness = vec[-1][3]
+                self.parent().parent().parent().parent().parent().set_pen_color(color, self)
+                self.toPaint(coord[0], coord[1])
+                self.parent().parent().parent().parent().parent().curThickness = reserveThickness
             self.last_x = None
             self.last_y = None
-            self.paintingForSave[-1].append((color.red(), color.green(), color.blue()))
+            self.paintingForSave[-1].append((color.red(), color.green(), color.blue(), vec[-1][3]))
         self.update()
     
     def toPaint(self, x, y):
@@ -171,7 +178,7 @@ class SecondWidget(QLabel):
 
             if len(self.paintingForSave) > 0:
                 c = self.parent().parent().parent().parent().parent().curColorForDrow
-                self.paintingForSave[-1].append((c.red(), c.green(), c.blue()))
+                self.paintingForSave[-1].append((c.red(), c.green(), c.blue(), self.parent().parent().parent().parent().parent().curThickness))
     
     def wheelEvent(self, e):
         workSpace = self.parent().parent().parent().parent().parent()
@@ -223,8 +230,8 @@ class CellTable(QTableWidget):
         super().__init__(parent)
         #self.table.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, self.table.size(), self.geometry()))
 
-        self.column_k = 41
-        self.row_k = 17
+        self.column_k = 59
+        self.row_k = 27
 
         self.setColumnCount(self.column_k)
         self.setRowCount(self.row_k)
