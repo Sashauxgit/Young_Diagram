@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import (
 QTableWidgetItem, QMenuBar, QFileDialog, QColorDialog, QStyle, QVBoxLayout, QHBoxLayout, QSlider, QDialog, QLineEdit
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QMouseEvent, QPalette, QColor, QFont, QPixmap, QPainter, QPen, QBrush, QIntValidator
+from PyQt5.QtGui import QMouseEvent, QPalette, QColor, QFont, \
+QPixmap, QPainter, QPen, QBrush, QIntValidator, QCursor
 
 import traceback as tr
 from fpdf import FPDF
@@ -54,6 +55,10 @@ class NumLineEdit(QLineEdit):
         if e.key() == Qt.Key_Return:
             self.parent().parent().setTextCell(self.coord_x, self.coord_y, self.text())
             self.parent().parent().update()
+            self.parent().update()
+            self.close()
+        elif e.key() == Qt.Key_Escape:
+            self.parent().update()
             self.close()
         else:
             super().keyPressEvent(e)
@@ -73,8 +78,10 @@ class SecondWidget(QLabel):
         self.painter = QPainter(self.pixmap())
         self.painter.setPen(self.pen)
         self.painter.setRenderHint(QPainter.Antialiasing)
+        self.setFocus()
 
         self.last_x, self.last_y = None, None
+        self.editLine = None
 
         self.paintingForSave = []
 
@@ -98,6 +105,18 @@ class SecondWidget(QLabel):
                 self.last_y = None
                 self.paintingForSave[-1].append((color.red(), color.green(), color.blue()))
     
+    def redrow(self, data):
+        for vec in data:
+            color = QColor(vec[-1][0], vec[-1][1], vec[-1][2])
+            coords = vec[:-1]
+            for coord in coords:
+                    self.parent().parent().parent().parent().parent().set_pen_color(color, self)
+                    self.toPaint(coord[0], coord[1])
+            self.last_x = None
+            self.last_y = None
+            self.paintingForSave[-1].append((color.red(), color.green(), color.blue()))
+        self.update()
+    
     def toPaint(self, x, y):
         if self.last_x is None:
             self.last_x = x
@@ -109,16 +128,10 @@ class SecondWidget(QLabel):
         self.painter.drawLine(self.last_x, self.last_y, x, y)
         self.paintingForSave[-1].append((x, y))
         #self.painter.end()
-        #self.update()
+        self.update()
 
         self.last_x = x
         self.last_y = y
-    
-    def mouseDoubleClickEvent(self, e):
-        if self.parent().parent().parent().parent().parent().workWithCellField:
-            super().mouseDoubleClickEvent(e)
-            return
-        self.editLine = NumLineEdit(self, e.x(), e.y())
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
@@ -126,6 +139,7 @@ class SecondWidget(QLabel):
                 self.parent().fillCell(e)
             if e.buttons() == Qt.RightButton:
                 self.parent().unfillCell(e)
+            self.setFocus()
             return
         
         if self.last_x is None: # First event.
@@ -133,6 +147,7 @@ class SecondWidget(QLabel):
             self.last_y = e.y()
             line = [(self.last_x, self.last_y)]
             self.paintingForSave.append(line)
+            self.setFocus()
             return # Ignore the first time.
 
         self.painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
@@ -150,7 +165,7 @@ class SecondWidget(QLabel):
                 self.parent().fillCell(e)
             if e.button() == Qt.RightButton:
                 self.parent().unfillCell(e)
-        else:
+        elif self.last_x != None and self.last_y != None:
             self.last_x = None
             self.last_y = None
 
@@ -167,6 +182,31 @@ class SecondWidget(QLabel):
         
         if newInd >= 0 or newInd < workSpace.pageTape.count():
             workSpace.pageTape.setCurrentIndex(newInd)
+    
+    def keyPressEvent(self, e):
+        workSpace = self.parent().parent().parent().parent().parent()
+        if e.key() == Qt.Key_Up or e.key() == Qt.Key_Down:
+            workSpace.switchMode()
+        
+        if e.key() == Qt.Key_Left and workSpace.curPageInd > 0:
+            workSpace.pageTape.setCurrentIndex(workSpace.curPageInd - 1)
+        
+        if e.key() == Qt.Key_Right and workSpace.curPageInd < workSpace.pageTape.count() - 1:
+            workSpace.pageTape.setCurrentIndex(workSpace.curPageInd + 1)
+        if e.key() == Qt.Key_E:
+            if self.editLine != None:
+                self.editLine.close()
+            cursor = QCursor()
+            position = self.mapFromGlobal(cursor.pos())
+            self.editLine = NumLineEdit(self, position.x(), position.y())
+        
+        if e.key() == Qt.Key_Z:
+            workSpace.ctrl_Z(self.paintingForSave[:-1])
+
+    
+    def update(self):
+        self.setFocus()
+        super().update()
 
 
 
@@ -280,7 +320,6 @@ class MainWindow(QMainWindow):
         openAction = menu.addAction("Open diagram")
         saveAction = menu.addAction("Save diagram")
         exportPdfAction = menu.addAction("Export to PDF")
-        screenAction = menu.addAction("Take screenshot")
         self.clearAction = menu.addAction("Clear current page")
         self.resetAction = menu.addAction("Full reset pages")
         
@@ -326,7 +365,6 @@ class MainWindow(QMainWindow):
         openAction.triggered.connect(self.openFile)
         saveAction.triggered.connect(self.saveFile)
         exportPdfAction.triggered.connect(self.exportPDF)
-        screenAction.triggered.connect(self.takeScreenshot)
         self.clearAction.triggered.connect(self.clearField)
         self.resetAction.triggered.connect(self.fullReset)
 
@@ -390,6 +428,7 @@ class MainWindow(QMainWindow):
                 er.exec()       
     
     def saveFile(self):
+        self.secondWindows[self.curPageInd].setFocus()
         filename, _ = QFileDialog.getSaveFileName(self, "Save File", ".", "Young Files (*.young)")
         if filename:
             with open(filename, 'w') as file:
@@ -432,11 +471,11 @@ class MainWindow(QMainWindow):
             return True
         return False
     
-    def takeScreenshot(self):
-        screenshot = self.curPage().grab()
-        filename, _ = QFileDialog.getSaveFileName(self, "Save screenshot", ".", "Image Files (*.png)")
-        if filename:
-            screenshot.save(filename, 'png')
+    def ctrl_Z(self, data):
+        self.secondWindows[self.curPageInd].close()
+        self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
+        self.secondWindows[self.curPageInd].redrow(data)
+        self.secondWindows[self.curPageInd].show()
     
     def clearField(self, ask):
         if ask != "noAsk" and not self.saveQuestion():
@@ -446,6 +485,7 @@ class MainWindow(QMainWindow):
         self.secondWindows[self.curPageInd].close()
         self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
         self.secondWindows[self.curPageInd].show()
+        self.secondWindows[self.curPageInd].setFocus()
     
     def fullReset(self, ask):
         if ask != "noAsk" and not self.saveQuestion():
@@ -525,18 +565,15 @@ class MainWindow(QMainWindow):
             drowData = None
         self.secondWindows.append(SecondWidget(self.curPage(), drowData))
         self.secondWindows[-1].show()
+        self.setFocus()
         self.addFlag = False
 
     def changePage(self):
-        try:
-            self.clearAction.triggered.disconnect(self.curPage().clearTable)
-        except:
-            pass
         self.curPageInd = self.pageTape.currentIndex()
         #print(self.curPageInd) #
-        self.clearAction.triggered.connect(self.curPage().clearTable)
         if not self.addFlag:
             self.set_pen_color(self.curColorForDrow)
+        self.setFocus()
     
     def curPage(self):
         return self.pageTape.widget(self.curPageInd)
@@ -562,16 +599,13 @@ class MainWindow(QMainWindow):
 
         reply = QMessageBox.question(self,\
             'Young diagram redactor',\
-            "The data could be lost! Do you want to export this data to PDF?",\
-            QMessageBox.Yes | QMessageBox.Ignore | QMessageBox.Save | QMessageBox.Cancel
+            "The data could be lost! Do you want to continue?",\
+            QMessageBox.Yes | QMessageBox.No
         )
-        if reply == QMessageBox.Cancel:
-            return False
-        if reply == QMessageBox.Save:
-            return self.saveFile()
         if reply == QMessageBox.Yes:
-            return self.exportPDF()
-        return True
+            return True
+        else:
+            return False
     
     def closeEvent(self, e):
         if self.saveQuestion():
@@ -579,6 +613,7 @@ class MainWindow(QMainWindow):
             e.accept()
         else:
             e.ignore()
+            self.setFocus()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
