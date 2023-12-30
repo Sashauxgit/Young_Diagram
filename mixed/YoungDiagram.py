@@ -36,9 +36,8 @@ COLORS = [
 '#f45b7a', '#c24998', '#81588d', '#bcb0c2', '#ffffff',
 ]
 
-
 class NumLineEdit(QLineEdit):
-    def __init__(self, parent, coord_x, coord_y):
+    def __init__(self, parent, coord_x, coord_y, text):
         super().__init__(parent)
         self.setGeometry(coord_x, coord_y, 40, 30)
         self.setFont(QFont("Times new roman", 20))
@@ -47,6 +46,8 @@ class NumLineEdit(QLineEdit):
 
         self.coord_x = coord_x
         self.coord_y = coord_y
+
+        self.setText(text)
 
         self.setFocus()
         self.show()
@@ -71,13 +72,10 @@ class SecondWidget(QLabel):
         self.drowField = QPixmap(1500, 800)
         self.drowField.fill(QColor(0,0,0,0))
         self.setPixmap(self.drowField)
+        self.painter = None
+        self.createPainter(self.parent().parent().parent().parent().parent().curColor, \
+self.parent().parent().parent().parent().parent().curThickness)
 
-        self.pen = QPen()
-        self.pen.setWidth(self.parent().parent().parent().parent().parent().curThickness)
-        self.pen.setColor(self.parent().parent().parent().parent().parent().curColorForDrow)
-        self.painter = QPainter(self.pixmap())
-        self.painter.setPen(self.pen)
-        self.painter.setRenderHint(QPainter.Antialiasing)
         self.setFocus()
 
         self.last_x, self.last_y = None, None
@@ -100,28 +98,29 @@ class SecondWidget(QLabel):
 
                 for coord in coords:
                     coord = coord[1:].split(", ")
-                    reserveThickness = self.parent().parent().parent().parent().parent().curThickness
-                    self.parent().parent().parent().parent().parent().curThickness = thickness
-                    self.parent().parent().parent().parent().parent().set_pen_color(color, self)
+                    self.createPainter(color, thickness)
                     self.toPaint(int(coord[0]), int(coord[1]))
-                    self.parent().parent().parent().parent().parent().curThickness = reserveThickness
                 self.last_x = None
                 self.last_y = None
                 self.paintingForSave[-1].append((color.red(), color.green(), color.blue(), thickness))
+        
+        self.createPainter(self.parent().parent().parent().parent().parent().curColor, \
+self.parent().parent().parent().parent().parent().curThickness)
+        self.update()
     
     def redrow(self, data):
         for vec in data:
             color = QColor(vec[-1][0], vec[-1][1], vec[-1][2])
             coords = vec[:-1]
             for coord in coords:
-                reserveThickness = self.parent().parent().parent().parent().parent().curThickness
-                self.parent().parent().parent().parent().parent().curThickness = vec[-1][3]
-                self.parent().parent().parent().parent().parent().set_pen_color(color, self)
+                self.createPainter(color, vec[-1][3])
                 self.toPaint(coord[0], coord[1])
-                self.parent().parent().parent().parent().parent().curThickness = reserveThickness
             self.last_x = None
             self.last_y = None
             self.paintingForSave[-1].append((color.red(), color.green(), color.blue(), vec[-1][3]))
+        
+        self.createPainter(self.parent().parent().parent().parent().parent().curColor, \
+self.parent().parent().parent().parent().parent().curThickness)
         self.update()
     
     def toPaint(self, x, y):
@@ -139,6 +138,19 @@ class SecondWidget(QLabel):
 
         self.last_x = x
         self.last_y = y
+    
+    def createPainter(self, color, thickness):
+        pen = QPen()
+        pen.setWidth(thickness)
+        color = QColor(color)
+        pen.setColor(color)
+
+        if self.painter != None:
+            self.painter.end()
+        
+        self.painter = QPainter(self.pixmap())
+        self.painter.setPen(pen)
+        self.painter.setRenderHint(QPainter.Antialiasing)
     
     def mouseMoveEvent(self, e):
         if self.parent().parent().parent().parent().parent().workWithCellField:
@@ -177,7 +189,7 @@ class SecondWidget(QLabel):
             self.last_y = None
 
             if len(self.paintingForSave) > 0:
-                c = self.parent().parent().parent().parent().parent().curColorForDrow
+                c = self.parent().parent().parent().parent().parent().curColor
                 self.paintingForSave[-1].append((c.red(), c.green(), c.blue(), self.parent().parent().parent().parent().parent().curThickness))
     
     def wheelEvent(self, e):
@@ -200,15 +212,28 @@ class SecondWidget(QLabel):
         
         if e.key() == Qt.Key_Right and workSpace.curPageInd < workSpace.pageTape.count() - 1:
             workSpace.pageTape.setCurrentIndex(workSpace.curPageInd + 1)
-        if e.key() == Qt.Key_E:
+
+        numKeys = {Qt.Key_1: '1', Qt.Key_2: '2', Qt.Key_3: '3', Qt.Key_4: '4', Qt.Key_5: '5',
+Qt.Key_6: '6', Qt.Key_7: '7', Qt.Key_8: '8', Qt.Key_9: '9', Qt.Key_0: '0'}
+        
+        if e.key() in numKeys:
             if self.editLine != None:
                 self.editLine.close()
             cursor = QCursor()
             position = self.mapFromGlobal(cursor.pos())
-            self.editLine = NumLineEdit(self, position.x(), position.y())
+            self.editLine = NumLineEdit(self, position.x(), position.y(), numKeys[e.key()])
         
-        if e.key() == Qt.Key_Z:
-            workSpace.ctrl_Z(self.paintingForSave[:-1])
+        if e.key() == Qt.Key_Z and len(self.paintingForSave) > 0:
+            workSpace.ctrl_Z(self.paintingForSave[-1], self.paintingForSave[:-1])
+        
+        if e.key() == Qt.Key_X:
+            self.parent().ctrl_X()
+        
+        if e.key() == Qt.Key_U:
+            self.parent().ctrl_U()
+        
+        if e.key() == Qt.Key_Y:
+            self.parent().parent().parent().parent().parent().ctrl_Y(self.paintingForSave)
 
     
     def update(self):
@@ -263,6 +288,9 @@ class CellTable(QTableWidget):
 
         if initData != None:
             self.init(initData)
+        
+        self.cellEventsZ = []
+        self.cellEventsY = []
     
     def init(self, data):
         coords = data.split("\n")
@@ -290,22 +318,49 @@ class CellTable(QTableWidget):
     
     def fillCell(self, event):
         cell = self.itemAt(event.pos().x(), event.pos().y())
-        if cell != None:
-            cell.setBackground(self.parent().parent().parent().parent().curColorForCell)
+        if cell != None and cell.background().color() != self.parent().parent().parent().parent().curColor:
+            self.cellEventsZ.append((event.pos().x(), event.pos().y(), cell.background().color(), cell.text()))
+            cell.setBackground(self.parent().parent().parent().parent().curColor)
+            self.cellEventsY = []
 
     def setTextCell(self, x, y, text):
         cell = self.itemAt(x, y)
         if cell != None:
+            self.cellEventsZ.append((x, y, cell.background().color(), cell.text()))
             cell.setText(text)
+            self.cellEventsY = []
     
     def unfillCell(self, event):
-        cell = self.itemAt(event.pos().x(), event.pos().y())  
-        cell.setBackground(self.parent().parent().parent().parent().noColor)
+        cell = self.itemAt(event.pos().x(), event.pos().y())
+        if cell != None and cell.background().color() != self.parent().parent().parent().parent().noColor:
+            self.cellEventsZ.append((event.pos().x(), event.pos().y(), cell.background().color(), cell.text()))  
+            cell.setBackground(self.parent().parent().parent().parent().noColor)
+            self.cellEventsY = []
+    
+    def ctrl_X(self):
+        if len(self.cellEventsZ) > 0:
+            do = self.cellEventsZ[-1]
+            self.cellEventsZ = self.cellEventsZ[:-1]
+            cell = self.itemAt(do[0], do[1])
+            self.cellEventsY.append((do[0], do[1], cell.background().color(), cell.text()))
+            cell.setBackground(do[2])
+            cell.setText(do[3])
+            self.update()
+    
+    def ctrl_U(self):
+        if len(self.cellEventsY) > 0:
+            do = self.cellEventsY[-1]
+            self.cellEventsY = self.cellEventsY[:-1]
+            cell = self.itemAt(do[0], do[1])
+            self.cellEventsZ.append((do[0], do[1], cell.background().color(), cell.text()))
+            cell.setBackground(do[2])
+            cell.setText(do[3])
+            self.update()
 
 class ThickDialog(QDialog):
     def closeEvent(self, e):
         self.parent().demoPainter.end()
-        self.parent().set_pen_color(self.parent().curColorForDrow)
+        self.parent().set_pen_color(self.parent().curColor)
         e.accept()
 
 
@@ -318,6 +373,7 @@ class MainWindow(QMainWindow):
 
         self.workWithCellField = False
         self.addFlag = True
+        self.reserveData = []
 
         self.panel = QMenuBar(self)
         self.setMenuBar(self.panel)
@@ -342,8 +398,7 @@ class MainWindow(QMainWindow):
         self.switchToCellAct.triggered.connect(self.switchMode)
 
         self.curThickness = 3
-        self.curColorForCell = QColor(255,100,0)
-        self.curColorForDrow = QColor(0,0,0)
+        self.curColor = QColor(0,0,0)
         self.noColor = QColor(255,255,255)
 
         # Работа с лайаутами
@@ -380,13 +435,15 @@ class MainWindow(QMainWindow):
         self.lay.addLayout(palitra)
         self.setCentralWidget(self.mainWidget)
 
+        cursor = QCursor()
+        cursor.setShape(Qt.CrossCursor)
+        self.setCursor(cursor)
+
         self.addFlag = False
 
     def set_color(self, c):
-        if self.workWithCellField:
-            self.curColorForCell = QColor(c)
-        else:
-            self.set_pen_color(c)
+        self.curColor = QColor(c)
+        self.set_pen_color(c)
 
     def set_pen_color(self, c, workSpace = None):
         pen = QPen()
@@ -395,7 +452,7 @@ class MainWindow(QMainWindow):
         pen.setColor(color)
 
         if workSpace == None:
-            self.curColorForDrow = color
+            self.curColor = color
             workSpace = self.secondWindows[self.curPageInd]
         workSpace.painter.end()
         workSpace.painter = QPainter(workSpace.pixmap())
@@ -478,11 +535,21 @@ class MainWindow(QMainWindow):
             return True
         return False
     
-    def ctrl_Z(self, data):
+    def ctrl_Z(self, dataForY, data):
+        self.reserveData.append(dataForY)
         self.secondWindows[self.curPageInd].close()
         self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
         self.secondWindows[self.curPageInd].redrow(data)
         self.secondWindows[self.curPageInd].show()
+    
+    def ctrl_Y(self, data):
+        if len(self.reserveData) > 0:
+            data.append(self.reserveData[-1])
+            self.reserveData.pop()
+            self.secondWindows[self.curPageInd].close()
+            self.secondWindows[self.curPageInd] = SecondWidget(self.curPage())
+            self.secondWindows[self.curPageInd].redrow(data)
+            self.secondWindows[self.curPageInd].show()
     
     def clearField(self, ask):
         if ask != "noAsk" and not self.saveQuestion():
@@ -507,11 +574,8 @@ class MainWindow(QMainWindow):
         self.clearField(ask = "noAsk")
 
     def openColorDialog(self):
-        if self.workWithCellField:
-            self.curColorForCell = QColorDialog.getColor()
-        else:
-            self.curColorForDrow = QColorDialog.getColor()
-            self.set_pen_color(self.curColorForDrow)
+        self.curColor = QColorDialog.getColor()
+        self.set_pen_color(self.curColor)
     
     def openThicknessDialog(self):
         self.thickDialog = ThickDialog(self)
@@ -539,7 +603,7 @@ class MainWindow(QMainWindow):
         
         pen = QPen()
         pen.setWidth(self.curThickness)
-        pen.setColor(self.curColorForDrow)
+        pen.setColor(self.curColor)
         
         self.demoPainter = QPainter(self.demoLabel.pixmap())
         self.demoPainter.setPen(pen)
@@ -557,7 +621,7 @@ class MainWindow(QMainWindow):
         
         pen = QPen()
         pen.setWidth(self.curThickness)
-        pen.setColor(self.curColorForDrow)
+        pen.setColor(self.curColor)
         
         self.demoPainter.setPen(pen)
         self.demoPainter.drawPoint(500, 20)
@@ -579,7 +643,7 @@ class MainWindow(QMainWindow):
         self.curPageInd = self.pageTape.currentIndex()
         #print(self.curPageInd) #
         if not self.addFlag:
-            self.set_pen_color(self.curColorForDrow)
+            self.set_pen_color(self.curColor)
         self.setFocus()
     
     def curPage(self):
@@ -589,7 +653,13 @@ class MainWindow(QMainWindow):
         self.workWithCellField = not self.workWithCellField
         if self.workWithCellField:
             self.switchToCellAct.setText("Young mode")
+            cursor = QCursor()
+            cursor.setShape(Qt.PointingHandCursor)
+            self.setCursor(cursor)
         else:
+            cursor = QCursor()
+            cursor.setShape(Qt.CrossCursor)
+            self.setCursor(cursor)
             self.switchToCellAct.setText("Drow mode")
 
     def keyPressEvent(self, e):
@@ -601,6 +671,29 @@ class MainWindow(QMainWindow):
         
         if e.key() == Qt.Key_Right and self.curPageInd < self.pageTape.count() - 1:
             self.pageTape.setCurrentIndex(self.curPageInd + 1)
+        
+        if e.key() == Qt.Key_Z and len(self.secondWindows[self.curPageInd].paintingForSave) > 0:
+            self.ctrl_Z(self.secondWindows[self.curPageInd].paintingForSave[-1], self.secondWindows[self.curPageInd].paintingForSave[:-1])
+        
+        if e.key() == Qt.Key_X:
+            self.curPage().ctrl_X()
+        
+        if e.key() == Qt.Key_U:
+            self.curPage().ctrl_U()
+        
+        if e.key() == Qt.Key_Y:
+            self.ctrl_Y(self.secondWindows[self.curPageInd].paintingForSave)
+
+        numKeys = {Qt.Key_1: '1', Qt.Key_2: '2', Qt.Key_3: '3', Qt.Key_4: '4', Qt.Key_5: '5',
+Qt.Key_6: '6', Qt.Key_7: '7', Qt.Key_8: '8', Qt.Key_9: '9', Qt.Key_0: '0'}
+        
+        if e.key() in numKeys:
+            workSpace = self.secondWindows[self.curPageInd]
+            if workSpace.editLine != None:
+                workSpace.editLine.close()
+            cursor = QCursor()
+            position = workSpace.mapFromGlobal(cursor.pos())
+            workSpace.editLine = NumLineEdit(workSpace, position.x(), position.y(), numKeys[e.key()])
     
     def saveQuestion(self):
 
